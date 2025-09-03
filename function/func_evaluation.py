@@ -12,6 +12,7 @@ from pymodbus.pdu import ExceptionResponse
 from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.constants import Endian
 import time
+import datetime
 
 from function.func_ocr import PaddleOCRManager
 from function.func_connection import ConnectionManager
@@ -52,67 +53,72 @@ class Evaluation:
         return self.latest_image_path
 
     ### With Demo Balance ###
-    def eval_demo_test(self, ocr_res, right_key, ocr_res_meas=None, image_path=None, img_result=None):
+    def eval_demo_test(self, ocr_res, correct_answers, test_step, reset_time=None, ocr_res_meas=None, image_path=None, img_result=None):
         self.meas_error = False
         self.condition_met = False
         
         image = cv2.imread(image_path)
 
-        ocr_right = right_key
+        def validate_percent(self, percent_list, lower_limit, upper_limit):
+            percent_error = False
+            for item in percent_list:
+                match = re.match(r"([-+]?\d+\.?\d*)\s*(.*)", item)
 
-        right_list = ' '.join(text.strip() for text in ocr_right).split()
-        ocr_rt_list = ' '.join(result.strip() for result in ocr_res).split()
+                if match and match.group(1):
+                    numeric_value = float(match.group(1))
+                    unit = match.group(2).strip()
 
-        right_counter = Counter(right_list)
-        ocr_rt_counter = Counter(ocr_rt_list)
-
-        self.ocr_error = list((ocr_rt_counter - right_counter).elements())
-        right_error = list((right_counter - ocr_rt_counter).elements())
-
-        def check_results(values, limits, ocr_meas_subset):
-            self.condition_met = True
-            meas_results = []
-
-            if isinstance(ocr_meas_subset, (float, int)):
-                results = {values[0]: str(ocr_meas_subset)}
-            elif isinstance(ocr_meas_subset, list):
-                results = {name: str(value) for name, value in zip(values, ocr_meas_subset)}
-            else:
-                print("Unexpected ocr_meas_subset type.")
-                return
-
-            for name, value in results.items():
-                match = re.match(r"([-+]?\d+\.?\d*)\s*(\D*)", value)
-                if match:
-                    numeric_value = float(match.group(1))  # 숫자 부분
-                    unit = match.group(2)  # 단위 부분 (예: V)
-                else:
-                    numeric_value = None
-                    unit = value.strip()
-
-                    # 텍스트 정답을 처리하는 로직 추가
-                text_matches = [lim for lim in limits if isinstance(lim, str)]
-                if any(text_match == value for text_match in text_matches):
-                    print(f"{name or 'empty'} = {value} (PASS by text match)")
-                    meas_results.append(f"{name or 'empty'} = {value} (PASS by text)")
-                    
-                elif numeric_value is not None and len(limits) >= 3 and isinstance(limits[0], (int, float)):
-                    if limits[0] <= numeric_value <= limits[1] and limits[2] == unit:
-                        print(f"{name} = {numeric_value}{unit} (PASS)")
-                        meas_results.append(f"{numeric_value}{unit} (PASS)")
+                    if unit == '%' and lower_limit < numeric_value < upper_limit:
+                        print(f"'{item}' -> (PASS)")
                     else:
-                        print(f"{name} = {value} (FAIL)")
-                        meas_results.append(f"{value} (FAIL)")
-                        self.meas_error = True
+                        print(f"'{item}' -> (FAIL - 단위 또는 범위 오류)")
+                        percent_error = True
                 else:
-                    print(f"{name} = {value} (FAIL)")
-                    meas_results.append(f"{value} (FAIL)")
-                    self.meas_error = True
-            return meas_results
+                    print(f"'{item}' -> (INFO - Skipping non-numeric text)")
+            
+            return percent_error
+        
+        def validate_timestamp(self, timestamp_list, reset_time):
+            timestamp_error = False
+            for item in timestamp_list:
+                dt_object = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
+                unix_timestamp = dt_object.timestamp()
+
+                if reset_time - 30 < unix_timestamp < reset_time + 30:
+                    print(f"'{item}' -> (PASS)")
+                else:
+                    print(f"'{item}' -> (FAIL - 단위 또는 범위 오류)")
+                    timestamp_error = True
+            
+            return timestamp_error
+
+        ### 고정 문자 가공 ###
+        ocr_fixed_text = [result.strip() for result in ocr_res[:2]]
+        ####################
+
+        ### 변동 문자 가공 ###
+        ocr_percent_text_tuple = re.findall(r'(\d+\.\d+\s*%)|([A-Z]+\s*%)', ocr_res[2])
+        ocr_percent_text = [item1 + item2 for item1, item2 in ocr_percent_text_tuple]
+        ocr_timestamp_text = re.findall(r'\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}', ocr_res[2])
+        ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[3])
+        ####################
+
+        ### 고정 문자 중 잘못된 문자 검증 ###
+        ocr_fixed_text_counter = Counter(ocr_fixed_text)
+        correct_answers_counter = Counter(correct_answers)
+
+        self.ocr_error = list((ocr_fixed_text_counter - correct_answers_counter).elements())
+        ocr_missing_item = list((correct_answers_counter - ocr_fixed_text_counter).elements())
+        ####################
         
         all_meas_results = []
 
-        if "RMS Voltage" in ''.join(ocr_res[0]) or "Fund. Volt." in ''.join(ocr_res[0]):
+        ### 검사 test_step 개념: Relay:1, Meter:2, CURRENT:02, RMS:001, LL:0001
+
+        if test_step == 221:
+            all_meas_results.append(validate_percent(ocr_percent_text, 49.5, 50.5))
+
+        if "RMS Voltage" in ocr_res[0]:
             if self.ocr_manager.color_detection(image, cc.color_rms_vol_ll.value) <= 10:
                 all_meas_results.extend(check_results(["AB", "BC", "CA", "Aver"], (180, 200, "V"), ocr_res_meas[:5]))
             elif self.ocr_manager.color_detection(image, cc.color_rms_vol_ln.value) <= 10:
@@ -284,9 +290,9 @@ class Evaluation:
             print("Nothing matching word")
 
         print(f"OCR - 정답: {self.ocr_error}")
-        print(f"정답 - OCR: {right_error}")
+        print(f"정답 - OCR: {ocr_missing_item}")
 
-        return self.ocr_error, right_error, self.meas_error, ocr_res, all_meas_results,
+        return self.ocr_error, ocr_missing_item, self.meas_error, ocr_res, all_meas_results,
 
     ### No source, No Demo ###
     def eval_none_test(self, ocr_res, right_key, ocr_res_meas=None, image_path=None, img_result=None):

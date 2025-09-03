@@ -526,9 +526,9 @@ class CMEngine():
 		self.long_wait(s3)
 
 		### Step 4 ###
-		send("out:v(1:1):a(150);p(0);f(60)")
-		send("out:v(1:2):a(160);p(240);f(60)")
-		send("out:v(1:3):a(170);p(120);f(60)")
+		send("out:v(1:1):a(220);p(0);f(60)")
+		send("out:v(1:2):a(230);p(240);f(60)")
+		send("out:v(1:3):a(240);p(120);f(60)")
 		send("out:i(1:1):a(1);p(0);f(60)")
 		send("out:i(1:2):a(1);p(240);f(60)") 
 		send("out:i(1:3):a(1);p(120);f(60)")
@@ -546,9 +546,9 @@ class CMEngine():
 		self.long_wait(s5)
 
 		### Step 6 ###
-		send("out:v(1:1):a(220);p(0);f(60)")
-		send("out:v(1:2):a(230);p(240);f(60)")
-		send("out:v(1:3):a(240);p(120);f(60)")
+		send("out:v(1:1):a(150);p(0);f(60)")
+		send("out:v(1:2):a(160);p(240);f(60)")
+		send("out:v(1:3):a(170);p(120);f(60)")
 		send("out:i(1:1):a(1);p(0);f(60)")
 		send("out:i(1:2):a(1);p(240);f(60)") 
 		send("out:i(1:3):a(1);p(120);f(60)")
@@ -608,14 +608,14 @@ class CMEngine():
 
 
 if __name__ == "__main__":
-	s1 = 32
+	s1 = 2520
 	s2 = 2
-	s3 = 33
+	s3 = 8878
 	s4 = 1
-	s5 = 220
-	s6 = 3
-	s7 = 9.3
-	value = 4
+	s5 = 4319
+	s6 = 5
+	s7 = 5875.3
+	value = 6
 	cm = ConnectionManager()
 	cm.start_monitoring()
 	modbus = ModbusManager(connect_manager=cm)

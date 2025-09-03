@@ -1,5 +1,5 @@
 from function.func_ocr import PaddleOCRManager
-from config.config_roi import ConfigROI as ConfigROI
+from config.config_demo_roi import ConfigROI as ConfigROI
 from pymodbus.client import ModbusTcpClient as ModbusClient
 import time
 import threading
@@ -10,7 +10,7 @@ paddleocr_func = PaddleOCRManager()
 
 class test:
 
-    SERVER_IP = '10.10.26.156'
+    SERVER_IP = '10.10.26.159'
     TOUCH_PORT = '5200'
     SETUP_PORT = '502'
     is_connected = False
@@ -85,10 +85,10 @@ class test:
             self.setup_client.write_register(ConfigMap.addr_measurement_setup_access.value[0], 1)
     
     def test001(self):
-        image_path = r"C:\PNT\AutoProgram\Vision\image_test\10.10.26.159_2025-03-25_16_06_34_M_S_ME_Current.png"
-        roi_keys = [ConfigROI.s_ct_primary_curr_1, ConfigROI.s_ct_primary_curr_2, ConfigROI.s_ct_secondary_curr_1, 
-                    ConfigROI.s_ct_secondary_curr_2, ConfigROI.s_reference_curr_1, ConfigROI.s_reference_curr_2, 
-                   ] # ConfigROI.s_tdd_nominal_curr_1, ConfigROI.s_tdd_nominal_curr_2, ConfigROI.s_min_meas_curr_1, ConfigROI.s_min_meas_curr_2, ConfigROI.s_tdd_reference_selection_1, ConfigROI.s_tdd_reference_selection_2,
+        image_path = r"\\10.10.20.30\screenshot\10.10.26.159_2025-09-03_12_46_41_M_H_CU_RMS.png"
+        roi_keys = [ConfigROI.m_curr_rms_title, ConfigROI.m_curr_rms_1, ConfigROI.m_curr_rms_2, 
+                    ConfigROI.m_curr_rms_3,
+                   ] 
         setup = 1
         ocr_results = paddleocr_func.paddleocr_basic(image=image_path, roi_keys=roi_keys, test_type=setup)
         print(ocr_results)

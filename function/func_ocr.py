@@ -4,7 +4,7 @@ from paddleocr import PaddleOCR
 from itertools import chain
 import os
 
-from config.config_roi import Configs
+from config.config_demo_roi import Configs
 
 class PaddleOCRManager:
 
@@ -116,7 +116,7 @@ class PaddleOCRManager:
                         flat_text_results.append((coords, (text, score)))
                         original_results.append((coords, text, score))
 
-                        if score < 0.96:
+                        if score < 0.5:
                             low_confidence_texts.append((coords, text, score))
                 else:
                     print("text_results error")
@@ -126,120 +126,6 @@ class PaddleOCRManager:
                 height, width = roi_image.shape[:2]
                 margin = 5
                 # 신뢰도 낮은 텍스트 처리
-                for coords, text, conf in low_confidence_texts:
-                    max_retries = 3
-                    retry_count = 0
-                    success = False
-
-                    print(f"ROI '{roi_key}'에서 신뢰도 98% 미만의 텍스트:")
-                    print(f" - '{text}' (신뢰도: {conf * 100:.2f}%)")
-                    # coords를 사용하여 해당 텍스트 영역 이미지 추출
-                    x_min = max(0, int(min([pt[0] for pt in coords])) - margin)
-                    x_max = min(width, int(max([pt[0] for pt in coords])) + margin)
-                    y_min = max(0, int(min([pt[1] for pt in coords])) - margin)
-                    y_max = min(height, int(max([pt[1] for pt in coords])) + margin)
-                    text_roi = roi_image[y_min:y_max, x_min:x_max]
-
-                    # cv2.imshow("test", text_roi)
-                    # cv2.waitKey(0)
-                    # cv2.destroyAllWindows()
-
-                    # 이미지 전처리 및 OCR 재시도
-                    if text_roi.size == 0:
-                        continue  # 유효하지 않은 영역은 건너뜁니다
-                    while retry_count < max_retries and not success:
-                        char_image = text_roi.copy()
-                        ### 일반 텍스트 영역 / 97% 초과가 되지않으면 바로 실행
-                        if retry_count == 0 and self.phasor_condition == 0 and test_type == 0:
-                            self.update_n(4)
-                            char_image = cv2.resize(char_image, None, fx=self.n, fy=self.n, interpolation=cv2.INTER_CUBIC)
-                            kernel2 = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-                            char_image = cv2.filter2D(char_image, -1, kernel2)
-                            gray_char = cv2.cvtColor(char_image, cv2.COLOR_BGR2GRAY)
-                            _, thresh_char = cv2.threshold(gray_char, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                            char_image = cv2.cvtColor(thresh_char, cv2.COLOR_GRAY2BGR)
-                        
-                        ### 그림 영역 / 97% 초과가 되지않으면 바로 실행 (Phasor와 같은 A, B, C 주위에 색박스로 된 부분)
-                        elif retry_count == 0 and self.phasor_condition == 1 and test_type == 0:
-                            self.update_n(3)
-                            char_image = cv2.resize(char_image, None, fx=self.n, fy=self.n, interpolation=cv2.INTER_CUBIC)
-                            sharpening_kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-                            char_image = cv2.filter2D(char_image, -1, sharpening_kernel)
-                            gray_char = cv2.cvtColor(char_image, cv2.COLOR_BGR2GRAY)
-                            _, thresh_char = cv2.threshold(gray_char, 0, 100, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                            edges = cv2.Canny(thresh_char, 50, 150)
-                            char_image = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
-                        
-                        ### 일반 텍스트 영역 재시도 2번째
-                        elif retry_count == 1 and self.phasor_condition == 0 and test_type == 0:
-                            self.update_n(3)
-                            char_image = cv2.resize(char_image, None, fx=self.n, fy=self.n, interpolation=cv2.INTER_CUBIC)
-                            kernel2 = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
-                            char_image = cv2.filter2D(char_image, -1, kernel2)
-                            gray_char = cv2.cvtColor(char_image, cv2.COLOR_BGR2GRAY)
-                            _, thresh_char = cv2.threshold(gray_char, 150, 255, cv2.THRESH_BINARY)
-                            clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(9, 9))
-                            enhanced_char = clahe.apply(thresh_char)
-                            char_image = cv2.cvtColor(enhanced_char, cv2.COLOR_GRAY2BGR)
-
-                        ### 그림 영역 재시도 2번째
-                        elif retry_count == 1 and self.phasor_condition == 1 and test_type == 0:
-                            self.update_n(4)
-                            char_image = cv2.resize(char_image, None, fx=self.n, fy=self.n, interpolation=cv2.INTER_CUBIC)
-                            kernel2 = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-                            char_image = cv2.filter2D(char_image, -1, kernel2)
-                            gray_char = cv2.cvtColor(char_image, cv2.COLOR_BGR2GRAY)
-                            _, thresh_char = cv2.threshold(gray_char, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                            char_image = cv2.cvtColor(thresh_char, cv2.COLOR_GRAY2BGR)
-
-                        ### 일반 텍스트 영역 재시도 3번째
-                        elif retry_count > 1 and self.phasor_condition == 0 and test_type == 0:
-                            self.update_n(3)
-                            char_image = cv2.resize(char_image, None, fx=self.n, fy=self.n, interpolation=cv2.INTER_LANCZOS4)
-                            char_image = cv2.Canny(char_image, 0, 200)
-                            kernel = np.array([
-                                                [-1, -1, -1, -1, -1],
-                                                [-1,  1,  1,  1, -1],
-                                                [-1,  1,  5,  1, -1],
-                                                [-1,  1,  1,  1, -1],
-                                                [-1, -1, -1, -1, -1]], dtype=np.float32)
-                            char_image = cv2.filter2D(char_image, -1, kernel)
-
-                        elif retry_count > 1 and self.phasor_condition == 1 and test_type == 0:
-                            self.update_n(4)
-                            char_image = cv2.resize(char_image, None, fx=self.n, fy=self.n, interpolation=cv2.INTER_CUBIC)
-                            kernel2 = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-                            char_image = cv2.filter2D(char_image, -1, kernel2)
-                            gray_char = cv2.cvtColor(char_image, cv2.COLOR_BGR2GRAY)
-                            _, thresh_char = cv2.threshold(gray_char, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                            char_image = cv2.cvtColor(thresh_char, cv2.COLOR_GRAY2BGR)
-
-                        elif retry_count == 0 and self.phasor_condition == 0 and test_type == 1:
-                            self.update_n(1)
-                            char_image = cv2.resize(char_image, None, fx=self.n, fy=self.n, interpolation=cv2.INTER_CUBIC)
-
-                        retry_result = ocr.ocr(char_image, cls=False)
-                        # print(f"재시도 OCR 결과 (시도 {retry_count}):", retry_result)
-                        if retry_result and retry_result[0]:
-                            flat_retry_result = list(chain.from_iterable(retry_result))
-                            for res in flat_retry_result:
-                                new_coords, (new_text, new_confidence) = res
-                                new_text = new_text.strip()
-                                new_confidence = float(new_confidence)
-
-                                if new_confidence >= 0.98 or new_text.lower() == "c" or ((new_text.upper() == "V0" or new_text.upper() == "U0") and new_confidence >= 0.85):
-                                    # original_results에서 해당 좌표를 찾아 업데이트
-                                    for i, (orig_coords, orig_text, orig_conf) in enumerate(original_results):
-                                        if orig_coords == coords:
-                                            combined_text = self.merge_texts(orig_text, new_text, orig_coords, new_coords)
-                                            original_results[i] = (orig_coords, combined_text, new_confidence)
-                                            success = True
-                                            break
-                                    success = True
-                                    break
-                        else:
-                            print("재시도 후에도 텍스트를 인식하지 못했습니다.")
-                        retry_count += 1
                 
                 extracted_texts = [text for coords, text, conf in original_results]
                 extracted_texts = ' '.join(extracted_texts)
