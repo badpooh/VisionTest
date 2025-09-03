@@ -1,0 +1,16 @@
+<RCC>
+  <qresource>
+    <file>images/computer.png</file>
+    <file>images/videocam.png</file>
+    <file>images/rule_settings.png</file>
+    <file>images/close.png</file>
+    <file>images/logout.png</file>
+    <file>images/search.png</file>
+    <file>images/brand_family.png</file>
+    <file>images/home.png</file>
+    <file>images/Rootech.png</file>
+    <file>images/dashboard.png</file>
+    <file>images/menu.png</file>
+    <file>images/more.png</file>
+  </qresource>
+</RCC>
