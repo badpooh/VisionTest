@@ -1,4 +1,5 @@
 from pymodbus.client import ModbusTcpClient as ModbusClient
+import pythoncom
 import threading
 import re, time
 import win32com.client
@@ -606,101 +607,203 @@ class CMEngine():
 		"""로그 메시지를 콘솔에 출력합니다."""
 		print(msg)
 
+	def build_and_exec(self, plan):
+		send = self.execute_command
+		send("seq:clr")
+		send("seq:begin")
+
+		send("out:pmode(abs)")   # 첫 on은 abs
+		first = True
+		for step in plan:
+			V = step["V"]; I = step["I"]; dur = step["duration"]
+
+			# 3상 전압/전류 설정
+			for idx, (a,p,f) in enumerate(V, start=1):
+				send(f"out:v(1:{idx}):a({a});p({p});f({f})")
+			for idx, (a,p,f) in enumerate(I, start=1):
+				send(f"out:i(1:{idx}):a({a});p({p});f({f})")
+
+			send("out:on")
+			if first:
+				send("out:pmode(diff)")  # 이후부턴 diff로 위상 점프 방지
+				first = False
+
+			# 긴 대기는 쪼개서 시퀀스에 누적
+			self.long_wait(dur)
+
+		send("out:off")
+		send("seq:end")
+		send("seq:exec")
+		self.seq_start = time.monotonic()
+		self.plan = plan
+		self.durations = [s["duration"] for s in plan]
+
+	def start_supervisor(self, total_expected_sec):
+		self._supervisor_stop_evt = threading.Event()
+		
+		# 스레드에 필요한 device_id를 인자로 넘겨줍니다.
+		args_for_thread = (self.device_id, total_expected_sec, self._supervisor_stop_evt)
+		
+		# target을 새로운 함수로 지정합니다.
+		self._supervisor_thread = threading.Thread(target=self._supervisor_loop, args=args_for_thread, daemon=True)
+		self._supervisor_thread.start()
+
+	def _supervisor_loop(self, device_id, total_expected_sec, stop_evt):
+		"""Supervisor 스레드 전용 루프 함수"""
+		pythoncom.CoInitialize()
+		thread_cm_engine = None
+		try:
+			# 1. 이 스레드 전용의 새로운 COM 객체를 생성
+			thread_cm_engine = win32com.client.Dispatch("OMICRON.CMEngAL")
+
+			# ★★★ 2. 이 스레드에서도 DevLock을 호출하여 장비를 잠급니다 ★★★
+			thread_cm_engine.DevLock(device_id)
+			print("Supervisor thread has successfully locked the device.")
+
+			start_ts = time.time()
+			
+			while not stop_evt.is_set():
+				# ... (이하 루프 로직은 동일)
+				elapsed = time.time() - start_ts
+				if elapsed >= total_expected_sec:
+					print("Supervisor: expected duration reached.")
+					break
+
+				resp = thread_cm_engine.Exec(device_id, "seq:status?(step)")
+				# ...
+
+		except Exception as e:
+			print(f"Supervisor thread encountered an error: {e}")
+		finally:
+			# 3. 스레드가 끝나기 전 잠금 해제도 시도 (선택 사항이지만 좋은 습관)
+			if thread_cm_engine and device_id:
+				try:
+					thread_cm_engine.DevUnlock(device_id)
+				except Exception:
+					pass # 이미 해제되었을 수 있음
+			
+			pythoncom.CoUninitialize()
+			print("Supervisor thread stopped.")
+
+	def _compute_resume(self, elapsed):
+		t=0
+		for idx,d in enumerate(self.durations):
+			if elapsed < t + d:
+				remain = t + d - elapsed
+				return idx, max(0.1, remain)  # remain 최소 0.1s
+			t += d
+		return None, 0
+
+	def _recover(self, idx, remain):
+		print(f"[RECOVER] restart from step {idx} with remain ~{remain:.2f}s")
+		# 보호 상태 클리어: 안전차원에서
+		try: self.execute_command("out:off")
+		except: pass
+		# 시퀀스 재작성: idx 스텝은 remain만큼, 그 뒤는 원래 duration
+		plan2 = []
+		step0 = dict(self.plan[idx])  # shallow copy
+		step0["duration"] = remain
+		plan2.append(step0)
+		for k in range(idx+1, len(self.plan)):
+			plan2.append(self.plan[k])
+		self.build_and_exec(plan2, start_index=0, first_wait_override=remain)
+
+def fetch_and_print_report(modbus_obj, report_title):
+	"""
+	Modbus 장비에서 집계 데이터를 읽어와서 형식에 맞게 출력하는 함수
+	"""
+	print(f"\n--- [Report] {report_title} ---")
+	
+	# 1. 모든 관련 데이터를 한 번에 읽어옵니다.
+	value_max = modbus_obj.max_read()
+	value_time = modbus_obj.aggregation_max_read()
+	start_sec, start_msec, start_dt, start_unix = modbus_obj.aggre_start_time_read()
+	end_sec, end_msec, end_dt = modbus_obj.aggre_end_time_read()
+	idx_select, idx_newest = modbus_obj.aggre_index()
+
+	# 2. Peak 시간 계산 (값이 None이 아닐 때만 안전하게 계산)
+	peak_datetime = "Calculation Error"
+	if start_unix is not None and value_time is not None:
+		try:
+			peak_unixtime = start_unix + (value_time / 1000)
+			peak_datetime = datetime.datetime.fromtimestamp(peak_unixtime)
+		except (TypeError, ValueError):
+			pass # 계산 중 에러가 나도 프로그램이 멈추지 않도록 처리
+
+	# 3. 결과를 일관된 형식으로 출력합니다.
+	print(f"  Max Voltage : {value_max}")
+	print(f"  Peak Time   : {peak_datetime}")
+	print(f"  Time Offset : {value_time} ms")
+	print(f"  Start Time  : {start_dt}")
+	print(f"  End Time    : {end_dt}")
+	print(f"  Index Select: {idx_select}, Index Newest: {idx_newest}")
+	
+	# 다음 단계에서 사용할 수 있도록 newest_index를 반환
+	return idx_newest
 
 if __name__ == "__main__":
-	s1 = 2520
-	s2 = 2
-	s3 = 8878
-	s4 = 1
-	s5 = 4319
-	s6 = 5
-	s7 = 5875.3
-	value = 6
+	s1, s2, s3, s4, s5, s6, s7 = 12, 1, 30, 1, 7, 0.5, 4.3
+	value = 3
+	
+	plan = [
+		{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s1+10},
+		{"V":[(100,0,60),(110,240,60),(120,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s2},
+		{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s3},
+		{"V":[(220,0,60),(230,240,60),(240,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s4},
+		{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s5},
+		{"V":[(150,0,60),(160,240,60),(170,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s6},
+		{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s7},
+	]
+
 	cm = ConnectionManager()
 	cm.start_monitoring()
 	modbus = ModbusManager(connect_manager=cm)
 	modbus.control_unlock()
-	modbus.aggregation_selection(value)
-
+	
 	cm_engine = CMEngine()
 	if cm_engine.scan_and_select_device():
-		cm_engine.cmc_output_case1(s1, s2, s3, s4, s5, s6, s7)
-		print("-------테스트 시작 시간---------")
-		modbus.unix_time_write(1756180790)
-		time.sleep(10)
-		modbus.unix_time_read()
-		time.sleep(s1 + s2 + s3 + s4 + s5 + s6 + s7)
-		print("----------결과-----------")
-		value_max_1 = modbus.max_read()
-		value_time_1 = modbus.aggregation_max_read()
-		value_start_time_sec_1, value_start_time_msec_1, dt_start_1, sum_start_time_1 = modbus.aggre_start_time_read()
-		value_end_time_sec_1, value_end_time_msec_1, dt_end_1 = modbus.aggre_end_time_read()
-		peak_unixtime_1 = sum_start_time_1 + (value_time_1/1000)
-		peak_datetime_1 = datetime.datetime.fromtimestamp(peak_unixtime_1)
-
-		print(f"Aggregation {value}\n 전압: {value_max_1} \n PeakTime: {peak_datetime_1} \n Timeoffest: {value_time_1}")
-		print(f"시작시간(Unix): {value_start_time_sec_1} + {value_start_time_msec_1} / 시간: {dt_start_1}")
-		print(f"종료시간(Unix): {value_end_time_sec_1} + {value_end_time_msec_1} / 시간: {dt_end_1}")
-		index_selection_1, index_newest_1 = modbus.aggre_index()
-		print(f"index selec: {index_selection_1}, index newest: {index_newest_1}")
-
-		print("------------------------")
-
-		modbus.aggregation_selection(value-1)
-		modbus.data_fetch()
-		value_max_2 = modbus.max_read()
-		value_time_2 = modbus.aggregation_max_read()
-		value_start_time_sec_2, value_start_time_msec_2, dt_start_2, sum_start_time_2= modbus.aggre_start_time_read()
-		value_end_time_sec_2, value_end_time_msec_2, dt_end_2 = modbus.aggre_end_time_read()
-		peak_unixtime_2 = sum_start_time_2 + (value_time_2/1000)
-		peak_datetime_2 = datetime.datetime.fromtimestamp(peak_unixtime_2)
-		print(f"Aggregation {value - 1}\n 전압: {value_max_2} \n PeakTime: {peak_datetime_2} \n Timeoffest: {value_time_2}")
-		print(f"시작시간(Unix): {value_start_time_sec_2} + {value_start_time_msec_2} / 시간: {dt_start_2}")
-		print(f"종료시간(Unix): {value_end_time_sec_2} + {value_end_time_msec_2} / 시간: {dt_end_2}")
-		index_selection_2, index_newest_2 = modbus.aggre_index()
-		print(f"index selec: {index_selection_2}, index newest: {index_newest_2}")
-
-		print("------------------------")
-
-		modbus.aggre_index_selection_update_mode(0)
-		index_selection3 = modbus.aggregation_index_selection(index_newest_2-3)
-		modbus.data_fetch()
-		value_max_3 = modbus.max_read()
-		value_time_3 = modbus.aggregation_max_read()
-		value_start_time_sec_3, value_start_time_msec_3, dt_start_3, sum_start_time_3 = modbus.aggre_start_time_read()
-		value_end_time_sec_3, value_end_time_msec_3, dt_end_3 = modbus.aggre_end_time_read()
-		peak_unixtime_3 = sum_start_time_3 + (value_time_3/1000)
-		peak_datetime_3 = datetime.datetime.fromtimestamp(peak_unixtime_3)
-		print(f"Aggregation {value - 1}\n 전압: {value_max_3} \n PeakTime: {peak_datetime_3} \n Timeoffest: {value_time_3}")
-		print(f"시작시간(Unix): {value_start_time_sec_3} + {value_start_time_msec_3} / 시간: {dt_start_3}")
-		print(f"종료시간(Unix): {value_end_time_sec_3} + {value_end_time_msec_3} / 시간: {dt_end_3}")
-		print(f"index newest: {index_selection3}")
-		index_selection_3, index_newest_3 = modbus.aggre_index()
-		print(f"index selec: {index_selection_3}, index newest: {index_newest_3}")
 		
-		print("------------------------")
-
-		modbus.aggre_index_selection_update_mode(0)
-		index_selection4 = modbus.aggregation_index_selection(index_newest_2-4)
-		modbus.data_fetch()
-		value_max_4 = modbus.max_read()
-		value_time_4 = modbus.aggregation_max_read()
-		value_start_time_sec_4, value_start_time_msec_4, dt_start_4, sum_start_time_4 = modbus.aggre_start_time_read()
-		value_end_time_sec_4, value_end_time_msec_4, dt_end_4 = modbus.aggre_end_time_read()
-		peak_unixtime_4 = sum_start_time_4 + (value_time_4/1000)
-		peak_datetime_4 = datetime.datetime.fromtimestamp(peak_unixtime_4)
-		print(f"Aggregation {value - 1}\n 전압: {value_max_4} \n PeakTime: {peak_datetime_4} \n Timeoffest: {value_time_4}")
-		print(f"시작시간(Unix): {value_start_time_sec_4} + {value_start_time_msec_4} / 시간: {dt_start_4}")
-		print(f"종료시간(Unix): {value_end_time_sec_4} + {value_end_time_msec_4} / 시간: {dt_end_4}")
-		print(f"index newest: {index_selection4}")
-		index_selection_4, index_newest_4 = modbus.aggre_index()
-		print(f"index selec: {index_selection_4}, index newest: {index_newest_4}")
-
-		if cm_engine.device_timeout(timeout_seconds=120):
+		### --- [Phase 1] 10분 집계 테스트 및 결과 확인 ---
+		modbus.aggregation_selection(value)
+		cm_engine.build_and_exec(plan)
+		print("-------Writing Test Start Time---------")
+		modbus.unix_time_write(1756911590)
+		time.sleep(10) # 쓰기 명령 후 잠시 대기
+		modbus.unix_time_read() # 확인을 위해 바로 읽기
+		
+		# device_timeout으로 시퀀스가 끝날 때까지 기다리는 것이 더 안정적입니다.
+		total_sec = sum(p["duration"] for p in plan)
+		if cm_engine.device_timeout(timeout_seconds=total_sec + 120):
 			print("\nSequence successfully completed.")
+			
+			# 시퀀스가 끝난 직후 결과 확인
+			
+			time.sleep(5)
+			newest_idx_1 = fetch_and_print_report(modbus, f"Aggregation Mode {value}")
+
+			### --- [Phase 2] 1시간 집계 결과 확인 ---
+			modbus.aggregation_selection(value - 1) # 모드를 5 (1 hour)로 변경
+			modbus.data_fetch() # 데이터 갱신 트리거
+			newest_idx_2 = fetch_and_print_report(modbus, f"Aggregation Mode {value - 1}")
+
+			### --- [Phase 3] 특정 인덱스(newest-3) 결과 확인 ---
+			modbus.aggre_index_selection_update_mode(0)
+			index_to_check_3 = newest_idx_2 - 3
+			modbus.aggregation_index_selection(index_to_check_3)
+			modbus.data_fetch()
+			fetch_and_print_report(modbus, f"Specific Index {index_to_check_3}")
+
+			### --- [Phase 4] 특정 인덱스(newest-4) 결과 확인 ---
+			modbus.aggre_index_selection_update_mode(0)
+			index_to_check_4 = newest_idx_2 - 4
+			modbus.aggregation_index_selection(index_to_check_4)
+			modbus.data_fetch()
+			fetch_and_print_report(modbus, f"Specific Index {index_to_check_4}")
+
 		else:
 			print("\nSequence failed or timed out.")
+			
 		cm_engine.release_device()
+
 	print("Program finished.")
-	
 	cm.tcp_disconnect()

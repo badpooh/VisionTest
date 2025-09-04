@@ -11,5 +11,4 @@ class Demo_Balance():
 						'AverageLN': 6
 						}]
 
-
 	
