@@ -61,7 +61,7 @@ class ConnectionManager:
 	def heartbeat(self):
 		"""백그라운드에서 실행될 스레드의 메인 로직"""
 		while self.is_connected:
-			time.sleep(300) # 30초에 한번씩만 체크
+			time.sleep(300)
 			
 			with self.lock:
 				if not self.is_connected:
@@ -73,19 +73,19 @@ class ConnectionManager:
 				try:
 					response = client_to_check.read_holding_registers(1, count=1)
 					if response.isError():
-						raise ConnectionException("Keep-alive read failed")
+						raise ConnectionException("Heartbeat read failed")
 					else:
 						# ★★★ 추가된 부분: 읽기 성공 시 값 출력 ★★★
 						# uint16 값이므로 registers 리스트의 첫 번째 요소를 바로 사용
 						value = response.registers[0]
 						timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-						print(f"[{timestamp}] Keep-alive check OK. Register[1] value: {value}")
+						print(f"[{timestamp}] Heartbeat check OK. Register[1] value: {value}")
 
 				except Exception as e:
-					print(f"Keep-alive check failed: {e}. Attempting to reconnect...")
+					print(f"Heartbeat check failed: {e}. Attempting to reconnect...")
 					# 연결 실패 시, 중앙 관리되는 tcp_connect 함수로 재연결 시도
 					self.tcp_connect()
-		print("Keep-alive thread stopped.")
+		print("Heartbeat thread stopped.")
 
 	def start_monitoring(self):
 		if self.tcp_connect():
@@ -133,8 +133,6 @@ class ModbusManager():
 		if self.connect_manager.setup_client is None:
 			print("setup_client가 연결되어 있지 않습니다.")
 			return
-		
-		# ts = 1756180800
 		
 		regs = self.connect_manager.setup_client.convert_to_registers(
 			value=ts,
@@ -330,8 +328,6 @@ class ModbusManager():
 	
 	def data_fetch(self):
 		self.connect_manager.setup_client.read_holding_registers(14910, count=1)
-
-
 		
 class CMEngine():
 
@@ -436,7 +432,6 @@ class CMEngine():
 		print("--- Sequence definition complete. Executing... ---")
 		send("seq:exec")
 
-
 	def cmc_output_single(self, first_time, peak_time, end_time):
 		send = self.execute_command
 		f_time = first_time + 10
@@ -484,6 +479,135 @@ class CMEngine():
 		send("seq:exec")
 
 	def cmc_output_case1(self, step1, step2, step3, step4, step5, step6, step7):
+		send = self.execute_command
+		s1 = step1 + 10
+		s2 = step2
+		s3 = step3
+		s4 = step4
+		s5 = step5
+		s6 = step6
+		s7 = step7
+		
+		### Step 1 ###
+		send("seq:clr")
+		send("seq:begin")
+		send("out:pmode(abs)")
+		# step1 설정...
+		send("out:on")
+		send("out:pmode(diff)")
+
+		send("out:v(1:1):a(50);p(0);f(60)")
+		send("out:v(1:2):a(60);p(240);f(60)")
+		send("out:v(1:3):a(70);p(120);f(60)")
+		send("out:i(1:1):a(1);p(0);f(60)")
+		send("out:i(1:2):a(1);p(240);f(60)") 
+		send("out:i(1:3):a(1);p(120);f(60)")
+		
+		self.long_wait(s1)
+
+		### Step 2 ###
+		send("out:v(1:1):a(100);p(0);f(60)")
+		send("out:v(1:2):a(110);p(240);f(60)")
+		send("out:v(1:3):a(120);p(120);f(60)")
+		send("out:i(1:1):a(1);p(0);f(60)")
+		send("out:i(1:2):a(1);p(240);f(60)") 
+		send("out:i(1:3):a(1);p(120);f(60)")
+		
+		self.long_wait(s2)
+
+		### Step 3 ###
+		send("out:v(1:1):a(50);p(0);f(60)")
+		send("out:v(1:2):a(60);p(240);f(60)")
+		send("out:v(1:3):a(70);p(120);f(60)")
+		send("out:i(1:1):a(1);p(0);f(60)")
+		send("out:i(1:2):a(1);p(240);f(60)") 
+		send("out:i(1:3):a(1);p(120);f(60)")
+		
+		self.long_wait(s3)
+
+		### Step 4 ###
+		send("out:v(1:1):a(220);p(0);f(60)")
+		send("out:v(1:2):a(230);p(240);f(60)")
+		send("out:v(1:3):a(240);p(120);f(60)")
+		send("out:i(1:1):a(1);p(0);f(60)")
+		send("out:i(1:2):a(1);p(240);f(60)") 
+		send("out:i(1:3):a(1);p(120);f(60)")
+		
+		self.long_wait(s4)
+
+		### Step 5 ###
+		send("out:v(1:1):a(50);p(0);f(60)")
+		send("out:v(1:2):a(60);p(240);f(60)")
+		send("out:v(1:3):a(70);p(120);f(60)")
+		send("out:i(1:1):a(1);p(0);f(60)")
+		send("out:i(1:2):a(1);p(240);f(60)") 
+		send("out:i(1:3):a(1);p(120);f(60)")
+		
+		self.long_wait(s5)
+
+		### Step 6 ###
+		send("out:v(1:1):a(150);p(0);f(60)")
+		send("out:v(1:2):a(160);p(240);f(60)")
+		send("out:v(1:3):a(170);p(120);f(60)")
+		send("out:i(1:1):a(1);p(0);f(60)")
+		send("out:i(1:2):a(1);p(240);f(60)") 
+		send("out:i(1:3):a(1);p(120);f(60)")
+		
+		self.long_wait(s6)
+
+		### Step 7 ###
+		send("out:v(1:1):a(50);p(0);f(60)")
+		send("out:v(1:2):a(60);p(240);f(60)")
+		send("out:v(1:3):a(70);p(120);f(60)")
+		send("out:i(1:1):a(1);p(0);f(60)")
+		send("out:i(1:2):a(1);p(240);f(60)") 
+		send("out:i(1:3):a(1);p(120);f(60)")
+		
+		self.long_wait(s7)
+
+		send("out:off")
+
+		send("seq:end")
+		
+		print("--- Sequence definition complete. Executing... ---")
+		send("seq:exec")
+	
+	def device_timeout(self, timeout_seconds=None):
+		print("Waiting for sequence to finish by polling status...")
+		start_time = time.time()
+		
+		while True:
+			if time.time() - start_time > timeout_seconds:
+				print(f"\nError: Sequence did not finish within {timeout_seconds} seconds. (Timeout)")
+				return False
+
+			response = self.query_command("seq:status?(step)")
+			if response is None:
+				time.sleep(0.5)
+				continue
+
+			try:
+				step_str = response.split(',')[1]
+				current_step = int(step_str.strip().strip(';'))
+				
+				if current_step == 0:
+					# 루프가 끝나기 전 줄바꿈을 해줘서 다음 출력이 깔끔하게 나오도록 함
+					print("\nSequence has finished (current step is 0).")
+					return True
+				else:
+					print(f"\rSequence is running... (current step: {current_step})", end="")
+
+			except (IndexError, ValueError):
+				print(f"\nWarning: Could not parse step from response: '{response}'. Retrying...")
+
+			time.sleep(0.2)
+
+	def devlog(self, msg):
+		"""로그 메시지를 콘솔에 출력합니다."""
+		print(msg)
+
+	def build_and_exec(self, step1, step2, step3, step4, step5, step6, step7):
+
 		send = self.execute_command
 		s1 = step1 + 10
 		s2 = step2
@@ -572,71 +696,10 @@ class CMEngine():
 		
 		print("--- Sequence definition complete. Executing... ---")
 		send("seq:exec")
-	
-	def device_timeout(self, timeout_seconds=None):
-		print("Waiting for sequence to finish by polling status...")
-		start_time = time.time()
-		
-		while True:
-			if time.time() - start_time > timeout_seconds:
-				print(f"\nError: Sequence did not finish within {timeout_seconds} seconds. (Timeout)")
-				return False
 
-			response = self.query_command("seq:status?(step)")
-			if response is None:
-				time.sleep(0.5)
-				continue
-
-			try:
-				step_str = response.split(',')[1]
-				current_step = int(step_str.strip().strip(';'))
-				
-				if current_step == 0:
-					# 루프가 끝나기 전 줄바꿈을 해줘서 다음 출력이 깔끔하게 나오도록 함
-					print("\nSequence has finished (current step is 0).")
-					return True
-				else:
-					print(f"\rSequence is running... (current step: {current_step})", end="")
-
-			except (IndexError, ValueError):
-				print(f"\nWarning: Could not parse step from response: '{response}'. Retrying...")
-
-			time.sleep(0.2)
-
-	def devlog(self, msg):
-		"""로그 메시지를 콘솔에 출력합니다."""
-		print(msg)
-
-	def build_and_exec(self, plan):
-		send = self.execute_command
-		send("seq:clr")
-		send("seq:begin")
-
-		send("out:pmode(abs)")   # 첫 on은 abs
-		first = True
-		for step in plan:
-			V = step["V"]; I = step["I"]; dur = step["duration"]
-
-			# 3상 전압/전류 설정
-			for idx, (a,p,f) in enumerate(V, start=1):
-				send(f"out:v(1:{idx}):a({a});p({p});f({f})")
-			for idx, (a,p,f) in enumerate(I, start=1):
-				send(f"out:i(1:{idx}):a({a});p({p});f({f})")
-
-			send("out:on")
-			if first:
-				send("out:pmode(diff)")  # 이후부턴 diff로 위상 점프 방지
-				first = False
-
-			# 긴 대기는 쪼개서 시퀀스에 누적
-			self.long_wait(dur)
-
-		send("out:off")
-		send("seq:end")
-		send("seq:exec")
 		self.seq_start = time.monotonic()
-		self.plan = plan
-		self.durations = [s["duration"] for s in plan]
+		# self.plan = plan
+		# self.durations = [s["duration"] for s in plan]
 
 	def start_supervisor(self, total_expected_sec):
 		self._supervisor_stop_evt = threading.Event()
@@ -676,6 +739,7 @@ class CMEngine():
 			print(f"Supervisor thread encountered an error: {e}")
 		finally:
 			# 3. 스레드가 끝나기 전 잠금 해제도 시도 (선택 사항이지만 좋은 습관)
+			modbus.unix_time_read()
 			if thread_cm_engine and device_id:
 				try:
 					thread_cm_engine.DevUnlock(device_id)
@@ -742,18 +806,18 @@ def fetch_and_print_report(modbus_obj, report_title):
 	return idx_newest
 
 if __name__ == "__main__":
-	s1, s2, s3, s4, s5, s6, s7 = 12, 1, 30, 1, 7, 0.5, 4.3
-	value = 3
+	s1, s2, s3, s4, s5, s6, s7 = 720, 1, 1889, 0.5, 449.5, 3, 537.3
+	value = 5
 	
-	plan = [
-		{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s1+10},
-		{"V":[(100,0,60),(110,240,60),(120,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s2},
-		{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s3},
-		{"V":[(220,0,60),(230,240,60),(240,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s4},
-		{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s5},
-		{"V":[(150,0,60),(160,240,60),(170,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s6},
-		{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s7},
-	]
+	# plan = [
+	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s1+10},
+	# 	{"V":[(100,0,60),(110,240,60),(120,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s2},
+	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s3},
+	# 	{"V":[(220,0,60),(230,240,60),(240,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s4},
+	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s5},
+	# 	{"V":[(150,0,60),(160,240,60),(170,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s6},
+	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s7},
+	# ]
 
 	cm = ConnectionManager()
 	cm.start_monitoring()
@@ -762,24 +826,47 @@ if __name__ == "__main__":
 	
 	cm_engine = CMEngine()
 	if cm_engine.scan_and_select_device():
-		
-		### --- [Phase 1] 10분 집계 테스트 및 결과 확인 ---
-		modbus.aggregation_selection(value)
-		cm_engine.build_and_exec(plan)
+
 		print("-------Writing Test Start Time---------")
-		modbus.unix_time_write(1756911590)
+
+		cm_engine.build_and_exec(s1, s2, s3, s4, s5, s6, s7)
+		# ... (unix_time_write 등은 동일하게 유지) ...
+		modbus.unix_time_write(1756958390)
 		time.sleep(10) # 쓰기 명령 후 잠시 대기
-		modbus.unix_time_read() # 확인을 위해 바로 읽기
+		modbus.unix_time_read()
 		
-		# device_timeout으로 시퀀스가 끝날 때까지 기다리는 것이 더 안정적입니다.
-		total_sec = sum(p["duration"] for p in plan)
+		### --- 테스트 실행 및 결과 확인 ---
+		modbus.aggregation_selection(value)
+		
+		# 1. 테스트 시작 전, 현재 최신 인덱스를 저장해 둡니다.
+		_, initial_newest_index = modbus.aggre_index()
+		print(f"Initial newest index: {initial_newest_index}")
+		
+		total_sec = s1 + s2 + s3 + s4 + s5 + s6 + s7
 		if cm_engine.device_timeout(timeout_seconds=total_sec + 120):
+			modbus.unix_time_read()
 			print("\nSequence successfully completed.")
 			
-			# 시퀀스가 끝난 직후 결과 확인
-			
-			time.sleep(5)
+			# ★★★ 추가된 폴링 로직 ★★★
+			# 2. Modbus 장비의 집계가 완료될 때까지 '최신 인덱스'가 바뀔 때까지 기다립니다.
+			print("Waiting for Modbus device to update aggregation data...")
+			polling_start_time = time.time()
+			while True:
+				_, current_newest_index = modbus.aggre_index()
+				# 인덱스가 바뀌었다는 것은 새 데이터가 저장되었다는 의미
+				if current_newest_index > initial_newest_index:
+					print(f"Modbus data updated! (Index changed from {initial_newest_index} to {current_newest_index})")
+					break
+				# 폴링 타임아웃 (최대 10초)
+				if time.time() - polling_start_time > 10:
+					print("Polling timeout: Modbus index did not update.")
+					break
+				time.sleep(0.1) # 0.1초 간격으로 빠르게 확인
+			# ★★★
+
+			# 3. 이제 최종 데이터가 준비되었으므로 결과 확인
 			newest_idx_1 = fetch_and_print_report(modbus, f"Aggregation Mode {value}")
+
 
 			### --- [Phase 2] 1시간 집계 결과 확인 ---
 			modbus.aggregation_selection(value - 1) # 모드를 5 (1 hour)로 변경
@@ -788,14 +875,14 @@ if __name__ == "__main__":
 
 			### --- [Phase 3] 특정 인덱스(newest-3) 결과 확인 ---
 			modbus.aggre_index_selection_update_mode(0)
-			index_to_check_3 = newest_idx_2 - 3
+			index_to_check_3 = newest_idx_2 - 1
 			modbus.aggregation_index_selection(index_to_check_3)
 			modbus.data_fetch()
 			fetch_and_print_report(modbus, f"Specific Index {index_to_check_3}")
 
 			### --- [Phase 4] 특정 인덱스(newest-4) 결과 확인 ---
 			modbus.aggre_index_selection_update_mode(0)
-			index_to_check_4 = newest_idx_2 - 4
+			index_to_check_4 = newest_idx_2 - 3
 			modbus.aggregation_index_selection(index_to_check_4)
 			modbus.data_fetch()
 			fetch_and_print_report(modbus, f"Specific Index {index_to_check_4}")
@@ -807,3 +894,36 @@ if __name__ == "__main__":
 
 	print("Program finished.")
 	cm.tcp_disconnect()
+
+
+
+# def build_and_exec(self, plan):
+	# 	send = self.execute_command
+	# 	send("seq:clr")
+	# 	send("seq:begin")
+
+	# 	send("out:pmode(abs)")   # 첫 on은 abs
+	# 	first = True
+	# 	for step in plan:
+	# 		V = step["V"]; I = step["I"]; dur = step["duration"]
+
+	# 		# 3상 전압/전류 설정
+	# 		for idx, (a,p,f) in enumerate(V, start=1):
+	# 			send(f"out:v(1:{idx}):a({a});p({p});f({f})")
+	# 		for idx, (a,p,f) in enumerate(I, start=1):
+	# 			send(f"out:i(1:{idx}):a({a});p({p});f({f})")
+
+	# 		send("out:on")
+	# 		if first:
+	# 			send("out:pmode(diff)")  # 이후부턴 diff로 위상 점프 방지
+	# 			first = False
+
+	# 		# 긴 대기는 쪼개서 시퀀스에 누적
+	# 		self.long_wait(dur)
+
+	# 	send("out:off")
+	# 	send("seq:end")
+	# 	send("seq:exec")
+	# 	self.seq_start = time.monotonic()
+	# 	self.plan = plan
+	# 	self.durations = [s["duration"] for s in plan]
