@@ -10,15 +10,34 @@ from pymodbus.exceptions import ConnectionException
 
 class ConnectionManager:
 
+	_instance = None
+	def __new__(cls, *args, **kwargs):
+		if cls._instance is None:
+			cls._instance = super(ConnectionManager, cls).__new__(cls)
+		return cls._instance
+
 	def __init__(self):
-		self.SERVER_IP = '10.10.26.155'  # 장치 IP 주소
-		self.TOUCH_PORT = 5100  # 터치 포트
-		self.SETUP_PORT = 502  # 설정 포트
-		self.is_connected = False
-		self.monitoring_thread = None 
-		self.lock = threading.Lock() 
-		self.touch_client = None
-		self.setup_client = None
+		if not hasattr(self, 'initialized'):
+			self.SERVER_IP = None 
+			# self.TOUCH_PORT = 5100
+			# self.SETUP_PORT = 502
+			self.SETUP_PORT = None
+			self.is_connected = False
+			self.monitoring_thread = None 
+			self.lock = threading.Lock() 
+			self.touch_client = None
+			self.setup_client = None
+			self.initialized = True
+			
+	def ip_connect(self, selected_ip):
+		self.SERVER_IP = selected_ip
+		print(f"IP set to: {self.SERVER_IP}")
+			
+	def tp_update(self, selected_tp):
+		self.TOUCH_PORT = selected_tp
+	
+	def sp_update(self, selected_sp):
+		self.SETUP_PORT = selected_sp
 		
 	def tcp_connect(self):
 		if not self.SERVER_IP or not self.TOUCH_PORT or not self.SETUP_PORT:
@@ -75,8 +94,6 @@ class ConnectionManager:
 					if response.isError():
 						raise ConnectionException("Heartbeat read failed")
 					else:
-						# ★★★ 추가된 부분: 읽기 성공 시 값 출력 ★★★
-						# uint16 값이므로 registers 리스트의 첫 번째 요소를 바로 사용
 						value = response.registers[0]
 						timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
 						print(f"[{timestamp}] Heartbeat check OK. Register[1] value: {value}")
@@ -332,13 +349,34 @@ class ModbusManager():
 class CMEngine():
 
 	def __init__(self):
-		"""CMEngine 클래스 초기화"""
-		# self.modbus_manager = modbus_manager
 		self.device_id = 0
 		self.device_list = []
 		self.device_locked = False
-		self.cm_engine = win32com.client.Dispatch("OMICRON.CMEngAL")
-		print("CMEngine initialized.")
+
+	def connect(self):
+		"""COM 객체를 생성하고 장치를 스캔하여 잠급니다."""
+		# 이미 연결된 경우 다시 시도하지 않음
+		if self.device_locked:
+			print("Device is already connected and locked.")
+			return True
+		
+		try:
+			print("Initializing COM and connecting to CMEngine...")
+			# COM 라이브러리 초기화 (스레드 충돌 방지)
+			pythoncom.CoInitialize()
+			self.cm_engine = win32com.client.Dispatch("OMICRON.CMEngAL")
+		except Exception as e:
+			print(f"FATAL: Failed to create CMEngine COM object. Check if OMICRON software is installed. Error: {e}")
+			self.cm_engine = None
+			return False
+
+		# 기존의 scan_and_select_device 로직을 여기에 통합
+		if self.scan_and_select_device():
+			return True
+		else:
+			# 실패 시 COM 객체 정리
+			self.cm_engine = None
+			return False
 
 	def scan_and_select_device(self):
 		self.devlog("Scanning for devices...")
@@ -805,97 +843,95 @@ def fetch_and_print_report(modbus_obj, report_title):
 	# 다음 단계에서 사용할 수 있도록 newest_index를 반환
 	return idx_newest
 
-if __name__ == "__main__":
-	s1, s2, s3, s4, s5, s6, s7 = 720, 1, 1889, 0.5, 449.5, 3, 537.3
-	value = 5
+# if __name__ == "__main__":
+# 	s1, s2, s3, s4, s5, s6, s7 = 720, 1, 1889, 0.5, 449.5, 3, 537.3
+# 	value = 5
 	
-	# plan = [
-	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s1+10},
-	# 	{"V":[(100,0,60),(110,240,60),(120,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s2},
-	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s3},
-	# 	{"V":[(220,0,60),(230,240,60),(240,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s4},
-	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s5},
-	# 	{"V":[(150,0,60),(160,240,60),(170,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s6},
-	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s7},
-	# ]
+# 	# plan = [
+# 	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s1+10},
+# 	# 	{"V":[(100,0,60),(110,240,60),(120,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s2},
+# 	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s3},
+# 	# 	{"V":[(220,0,60),(230,240,60),(240,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s4},
+# 	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s5},
+# 	# 	{"V":[(150,0,60),(160,240,60),(170,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s6},
+# 	# 	{"V":[(50,0,60),(60,240,60),(70,120,60)], "I":[(1,0,60),(1,240,60),(1,120,60)], "duration": s7},
+# 	# ]
 
-	cm = ConnectionManager()
-	cm.start_monitoring()
-	modbus = ModbusManager(connect_manager=cm)
-	modbus.control_unlock()
+# 	cm = ConnectionManager()
+# 	cm.start_monitoring()
+# 	modbus = ModbusManager(connect_manager=cm)
+# 	modbus.control_unlock()
 	
-	cm_engine = CMEngine()
-	if cm_engine.scan_and_select_device():
+# 	cm_engine = CMEngine()
+# 	if cm_engine.scan_and_select_device():
 
-		print("-------Writing Test Start Time---------")
+# 		print("-------Writing Test Start Time---------")
 
-		cm_engine.build_and_exec(s1, s2, s3, s4, s5, s6, s7)
-		# ... (unix_time_write 등은 동일하게 유지) ...
-		modbus.unix_time_write(1756958390)
-		time.sleep(10) # 쓰기 명령 후 잠시 대기
-		modbus.unix_time_read()
+# 		cm_engine.build_and_exec(s1, s2, s3, s4, s5, s6, s7)
+# 		# ... (unix_time_write 등은 동일하게 유지) ...
+# 		modbus.unix_time_write(1756958390)
+# 		time.sleep(10) # 쓰기 명령 후 잠시 대기
+# 		modbus.unix_time_read()
 		
-		### --- 테스트 실행 및 결과 확인 ---
-		modbus.aggregation_selection(value)
+# 		### --- 테스트 실행 및 결과 확인 ---
+# 		modbus.aggregation_selection(value)
 		
-		# 1. 테스트 시작 전, 현재 최신 인덱스를 저장해 둡니다.
-		_, initial_newest_index = modbus.aggre_index()
-		print(f"Initial newest index: {initial_newest_index}")
+# 		# 1. 테스트 시작 전, 현재 최신 인덱스를 저장해 둡니다.
+# 		_, initial_newest_index = modbus.aggre_index()
+# 		print(f"Initial newest index: {initial_newest_index}")
 		
-		total_sec = s1 + s2 + s3 + s4 + s5 + s6 + s7
-		if cm_engine.device_timeout(timeout_seconds=total_sec + 120):
-			modbus.unix_time_read()
-			print("\nSequence successfully completed.")
+# 		total_sec = s1 + s2 + s3 + s4 + s5 + s6 + s7
+# 		if cm_engine.device_timeout(timeout_seconds=total_sec + 120):
+# 			modbus.unix_time_read()
+# 			print("\nSequence successfully completed.")
 			
-			# ★★★ 추가된 폴링 로직 ★★★
-			# 2. Modbus 장비의 집계가 완료될 때까지 '최신 인덱스'가 바뀔 때까지 기다립니다.
-			print("Waiting for Modbus device to update aggregation data...")
-			polling_start_time = time.time()
-			while True:
-				_, current_newest_index = modbus.aggre_index()
-				# 인덱스가 바뀌었다는 것은 새 데이터가 저장되었다는 의미
-				if current_newest_index > initial_newest_index:
-					print(f"Modbus data updated! (Index changed from {initial_newest_index} to {current_newest_index})")
-					break
-				# 폴링 타임아웃 (최대 10초)
-				if time.time() - polling_start_time > 10:
-					print("Polling timeout: Modbus index did not update.")
-					break
-				time.sleep(0.1) # 0.1초 간격으로 빠르게 확인
-			# ★★★
+# 			# ★★★ 추가된 폴링 로직 ★★★
+# 			# 2. Modbus 장비의 집계가 완료될 때까지 '최신 인덱스'가 바뀔 때까지 기다립니다.
+# 			print("Waiting for Modbus device to update aggregation data...")
+# 			polling_start_time = time.time()
+# 			while True:
+# 				_, current_newest_index = modbus.aggre_index()
+# 				# 인덱스가 바뀌었다는 것은 새 데이터가 저장되었다는 의미
+# 				if current_newest_index > initial_newest_index:
+# 					print(f"Modbus data updated! (Index changed from {initial_newest_index} to {current_newest_index})")
+# 					break
+# 				# 폴링 타임아웃 (최대 10초)
+# 				if time.time() - polling_start_time > 10:
+# 					print("Polling timeout: Modbus index did not update.")
+# 					break
+# 				time.sleep(0.1) # 0.1초 간격으로 빠르게 확인
+# 			# ★★★
 
-			# 3. 이제 최종 데이터가 준비되었으므로 결과 확인
-			newest_idx_1 = fetch_and_print_report(modbus, f"Aggregation Mode {value}")
+# 			# 3. 이제 최종 데이터가 준비되었으므로 결과 확인
+# 			newest_idx_1 = fetch_and_print_report(modbus, f"Aggregation Mode {value}")
 
 
-			### --- [Phase 2] 1시간 집계 결과 확인 ---
-			modbus.aggregation_selection(value - 1) # 모드를 5 (1 hour)로 변경
-			modbus.data_fetch() # 데이터 갱신 트리거
-			newest_idx_2 = fetch_and_print_report(modbus, f"Aggregation Mode {value - 1}")
+# 			### --- [Phase 2] 1시간 집계 결과 확인 ---
+# 			modbus.aggregation_selection(value - 1) # 모드를 5 (1 hour)로 변경
+# 			modbus.data_fetch() # 데이터 갱신 트리거
+# 			newest_idx_2 = fetch_and_print_report(modbus, f"Aggregation Mode {value - 1}")
 
-			### --- [Phase 3] 특정 인덱스(newest-3) 결과 확인 ---
-			modbus.aggre_index_selection_update_mode(0)
-			index_to_check_3 = newest_idx_2 - 1
-			modbus.aggregation_index_selection(index_to_check_3)
-			modbus.data_fetch()
-			fetch_and_print_report(modbus, f"Specific Index {index_to_check_3}")
+# 			### --- [Phase 3] 특정 인덱스(newest-3) 결과 확인 ---
+# 			modbus.aggre_index_selection_update_mode(0)
+# 			index_to_check_3 = newest_idx_2 - 1
+# 			modbus.aggregation_index_selection(index_to_check_3)
+# 			modbus.data_fetch()
+# 			fetch_and_print_report(modbus, f"Specific Index {index_to_check_3}")
 
-			### --- [Phase 4] 특정 인덱스(newest-4) 결과 확인 ---
-			modbus.aggre_index_selection_update_mode(0)
-			index_to_check_4 = newest_idx_2 - 3
-			modbus.aggregation_index_selection(index_to_check_4)
-			modbus.data_fetch()
-			fetch_and_print_report(modbus, f"Specific Index {index_to_check_4}")
+# 			### --- [Phase 4] 특정 인덱스(newest-4) 결과 확인 ---
+# 			modbus.aggre_index_selection_update_mode(0)
+# 			index_to_check_4 = newest_idx_2 - 3
+# 			modbus.aggregation_index_selection(index_to_check_4)
+# 			modbus.data_fetch()
+# 			fetch_and_print_report(modbus, f"Specific Index {index_to_check_4}")
 
-		else:
-			print("\nSequence failed or timed out.")
+# 		else:
+# 			print("\nSequence failed or timed out.")
 			
-		cm_engine.release_device()
+# 		cm_engine.release_device()
 
-	print("Program finished.")
-	cm.tcp_disconnect()
-
-
+# 	print("Program finished.")
+# 	cm.tcp_disconnect()
 
 # def build_and_exec(self, plan):
 	# 	send = self.execute_command
