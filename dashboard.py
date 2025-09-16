@@ -9,7 +9,6 @@ import xml.etree.ElementTree as ET
 from functools import partial
 
 from ui_dashboard import Ui_MainWindow
-from demo_test.demo_process import DemoProcess
 from demo_test.demo_process import DemoTest
 
 from setup_test.setup_process import SetupTest
@@ -48,7 +47,6 @@ class MyDashBoard(QMainWindow, Ui_MainWindow):
         self.selected_ip = ''
         self.setup_test_instance = setup_test_instance
         self.connect_manager = ConnectionManager()
-        self.meter_setup_process = DemoProcess()
         self.alarm = Alarm()
         self.setting_window = SettingWindow()
         self.setting_ip = SettingIP()

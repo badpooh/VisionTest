@@ -84,10 +84,15 @@ class PaddleOCRManager:
                 x, y, w, h = self.rois[roi_key]
                 roi_image = image[y:y+h, x:x+w]
 
+                # cv2.imshow("test", roi_image)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+
                 # (2) v5 호출: predict 사용, cls 인자 제거
                 # 필요시 호출 시점에 모듈 토글을 다시 지정할 수도 있습니다.
                 # pred_list = ocr.predict(roi_image, use_textline_orientation=False)
                 pred_list = ocr.predict(roi_image)
+                
 
                 original_results = []
                 if pred_list:

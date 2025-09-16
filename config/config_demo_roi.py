@@ -2,8 +2,8 @@ from enum import Enum
 
 class ConfigROI(Enum):
     m_curr_rms_fixed_text = ['RMS Current Min Max', 'A B C Average']
-    m_curr_rms_title = []
-    m_curr_rms_1 = []
+    m_curr_rms_title = ['title']
+    m_curr_rms_1 = ['a,b,c']
     m_curr_rms_2 = ['50.0 %'] # +timestamp
     m_curr_rms_3 = ['25.00 A']
     

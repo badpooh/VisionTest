@@ -5,8 +5,10 @@ import time
 import threading
 from config.config_map import ConfigMap
 from config.config_touch import ConfigTouch
+from function.func_evaluation import Evaluation
 
 paddleocr_func = PaddleOCRManager()
+func_evalution = Evaluation()
 
 class test:
 
@@ -86,12 +88,13 @@ class test:
     
     def test001(self):
         image_path = r"\\10.10.20.30\screenshot\10.10.26.159_2025-09-03_12_46_41_M_H_CU_RMS.png"
-        roi_keys = [ConfigROI.m_curr_rms_title, ConfigROI.m_curr_rms_1, ConfigROI.m_curr_rms_2, 
-                    ConfigROI.m_curr_rms_3,
-                   ] 
+        roi_keys = [ConfigROI.m_curr_rms_title, ConfigROI.m_curr_rms_1, ConfigROI.m_curr_rms_2, ConfigROI.m_curr_rms_3]
+        print(roi_keys) 
         setup = 1
         ocr_results = paddleocr_func.paddleocr_basic(image=image_path, roi_keys=roi_keys, test_type=setup)
+        eval_results = func_evalution.eval_demo_test(ocr_res=ocr_results, correct_answers=ConfigROI.m_curr_rms_fixed_text.value, test_step= 221,)
         print(ocr_results)
+        print(eval_results)
 
     def test002(self):
         for i in range(3):
