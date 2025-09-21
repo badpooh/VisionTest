@@ -53,8 +53,9 @@ class Evaluation:
         return self.latest_image_path
 
     ### With Demo Balance ###
-    def eval_demo_test(self, ocr_res, correct_answers, test_step, reset_time=None, ocr_res_meas=None, image_path=None, img_result=None):
-        self.meas_error = False
+    def eval_demo_test(self, ocr_res, correct_answers, test_step, reset_time=None, image_path=None, img_result=None):
+        self.demo_test_result = False
+        self.measurement_error = False
         self.condition_met = False
         
         image = cv2.imread(image_path)
@@ -71,14 +72,14 @@ class Evaluation:
                     if unit == '%' and lower_limit < numeric_value < upper_limit:
                         print(f"'{item}' -> (PASS)")
                     else:
-                        print(f"'{item}' -> (FAIL - 단위 또는 범위 오류)")
+                        print(f"'{item}' -> (FAIL / 단위 또는 범위 오류)")
                         percent_error = True
                 else:
                     print(f"'{item}' -> (INFO - Skipping non-numeric text)")
             
             return percent_error
         
-        def validate_timestamp(self, timestamp_list, reset_time):
+        def validate_timestamp(timestamp_list, reset_time):
             timestamp_error = False
             for item in timestamp_list:
                 dt_object = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
@@ -91,6 +92,27 @@ class Evaluation:
                     timestamp_error = True
             
             return timestamp_error
+        
+        def validate_measurement(measurement_list, lower_limit, upper_limit, right_unit):
+            results_list = []
+
+            for item in measurement_list:
+                match = re.match(r"([-+]?\d+\.?\d*)\s*(.*)", item) #[-+]?<기호>  \d+<숫자>  \.?<소수점>  \d*<숫자>)  \s*<공백>  (.*<나머지그룹>
+                if match and match.group(1):
+                    numeric_value = float(match.group(1))
+                    unit = match.group(2).strip()
+
+                    if lower_limit < numeric_value < upper_limit and unit == right_unit:
+                        result = f"{item} -> (PASS)"
+                        print(f"'{item}' -> (PASS)")
+                        results_list.append(result)
+                    else:
+                        print(f"'{item}' -> (FAIL / 단위 또는 범위 오류)")
+                        self.measurement_error = True
+                        result = f"{item} -> (FAIL)"
+                        results_list.append(result)
+
+            return self.measurement_error, results_list
 
         ### 고정 문자 가공 ###
         ocr_fixed_text = [result.strip() for result in ocr_res[:2]]
@@ -107,7 +129,7 @@ class Evaluation:
         ocr_fixed_text_counter = Counter(ocr_fixed_text)
         correct_answers_counter = Counter(correct_answers)
 
-        self.ocr_error = list((ocr_fixed_text_counter - correct_answers_counter).elements())
+        ocr_error = list((ocr_fixed_text_counter - correct_answers_counter).elements())
         ocr_missing_item = list((correct_answers_counter - ocr_fixed_text_counter).elements())
         ####################
         
@@ -118,14 +140,20 @@ class Evaluation:
         if test_step == 221:
             all_meas_results.append(validate_percent(ocr_percent_text, 49.5, 50.5))
             all_meas_results.append(validate_timestamp(ocr_timestamp_text, reset_time))
+            meas_error, meas_results = validate_measurement(ocr_measurement_text, 2.495, 2.505, "A")
+            all_meas_results.append(meas_error)
         
         elif not self.condition_met:
             print("Nothing matching word")
 
-        print(f"OCR - 정답: {self.ocr_error}")
+        for item in all_meas_results:
+            if item == True:
+                self.demo_test_result = True
+
+        print(f"OCR - 정답: {ocr_error}")
         print(f"정답 - OCR: {ocr_missing_item}")
 
-        return self.ocr_error, ocr_missing_item, self.meas_error, ocr_res, all_meas_results,
+        return self.demo_test_result, ocr_error, ocr_missing_item, ocr_fixed_text, meas_results, ocr_percent_text, ocr_timestamp_text
 
     ### No source, No Demo ###
     def eval_none_test(self, ocr_res, right_key, ocr_res_meas=None, image_path=None, img_result=None):
@@ -726,60 +754,33 @@ class Evaluation:
                 time_results.append(f"{time_str} / format error (FAIL)")
         return time_results
 
-    def save_csv(self, ocr_img, ocr_error, right_error, meas_error=False, ocr_img_meas=None, ocr_img_time=None, time_results=None, img_path=None, img_result=None, base_save_path=None, all_meas_results=None, invalid_elements=None):
-        ocr_img_meas = ocr_img_meas if ocr_img_meas is not None else []
-        # ocr_img_time = ocr_img_time if ocr_img_time is not None else []
-        time_results = time_results if time_results is not None else []
-        img_result = [img_result]
-
-        if invalid_elements is None:
-            invalid_elements = []
-
-        if ocr_img_meas == bool:
-            ocr_img_meas = []
-            num_entries = max(len(ocr_img), len(ocr_img_meas)+1, len(time_results)+1, len(img_result)+1)
-        else:
-            num_entries = max(len(ocr_img), len(ocr_img_meas)+1, len(time_results)+1, len(img_result)+1)
-
-        overall_result = "PASS"
-        if ocr_error or right_error or meas_error:
-            overall_result = "FAIL"
-        if any("FAIL" in result for result in time_results):
-            overall_result = "FAIL"
+    def demo_test_save_csv(self, base_save_path, img_path, ocr_fixed_text, ocr_error, right_error, test_result=False, meas_error=False, ocr_measurement=None, ocr_meas_percent=None, ocr_meas_timestamp=None):
+        """
+        img_path: 이미지경로 + 이미지파일 제목 -> csv 파일 제목이 됨
+        base_save_path: CSV/이미지 저장할 폴더
+        img_path:   원본 이미지 파일 경로
+        ocr_fixed_text: str, 고정 문자
         
-        if all_meas_results is not None:
-            measurement_results = [f"{meas}" for meas in all_meas_results]
-            if len(measurement_results) < num_entries:
-                measurement_results = [None] + measurement_results + [None] * (num_entries - len(measurement_results) - 1)
+        """
+
+        if test_result or ocr_error or right_error or meas_error:
+            overall_result = "FAIL"
+        else:
+            overall_result = "PASS"
             
-            csv_results = {
-            "Main View": ocr_img + [None] * (num_entries - len(ocr_img)),
-            "Measurement": measurement_results,
-            "OCR-Right": [None] + [f"{ocr_error} ({'FAIL' if ocr_error else 'PASS'})"] + [""]* (num_entries-2),
-            "Right-OCR": [None] + [f"{right_error} ({'FAIL' if right_error else 'PASS'})"] + [""]* (num_entries-2),
-            f"Time Stamp ({self.reset_time})": [None] + time_results + [None] * (num_entries - len(time_results)-1),
-            "Img Match": [None] + img_result + [None] * (num_entries-len(img_result)-1),
-            "H.Text": [None] + invalid_elements + [None] * (num_entries-len(img_result)-1),
-            }
-        
-        else:
-            csv_results = {
-            "Main View": ocr_img + [None] * (num_entries - len(ocr_img)),
-            "OCR-Right": [None] + [f"{ocr_error} ({'FAIL' if ocr_error else 'PASS'})"] + [""]* (num_entries-2),
-            "Right-OCR": [None] + [f"{right_error} ({'FAIL' if right_error else 'PASS'})"] + [""]* (num_entries-2),
-            f"Time Stemp ({self.reset_time})": [None] + time_results + [None] * (num_entries - len(time_results)-1),
-            "Img Match": [None] + img_result + [None] * (num_entries-len(img_result)-1),
-            "H.Text": [None] + invalid_elements + [None] * (num_entries-len(img_result)-1),
-            }
-        
-        
-        # Ensure all columns have the same length
-        for key in csv_results:
-            csv_results[key] = csv_results[key][:num_entries]
-            if len(csv_results[key]) < num_entries:
-                csv_results[key].extend([None] * (num_entries - len(csv_results[key])))
+        results_dict = {
+                        # "Overall Result": overall_result,
+                        "Data View Fixed text": str(ocr_fixed_text),
+                        "OCR Errors (Extra)": f"{ocr_error} ({'FAIL' if ocr_error else 'PASS'})",
+                        "OCR Errors (Missing)": f"{right_error} ({'FAIL' if right_error else 'PASS'})",
+                        "Measurement Results": str(ocr_measurement),
+                        "Meas Ratio Results": str(ocr_meas_percent),
+                        "Timestamp Results": str(ocr_meas_timestamp),
+                        # "Image Match": img_result,
+                        # "Invalid Elements (H.Text)": str(invalid_elements)
+                        }
 
-        df = pd.DataFrame(csv_results)
+        df = pd.DataFrame(list(results_dict.items()), columns=['Parameter', 'Value'])
 
         # Saving the CSV
         file_name_with_extension = os.path.basename(img_path)

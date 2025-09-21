@@ -87,14 +87,26 @@ class test:
             self.setup_client.write_register(ConfigMap.addr_measurement_setup_access.value[0], 1)
     
     def test001(self):
-        image_path = r"\\10.10.20.30\screenshot\10.10.26.159_2025-09-03_12_46_41_M_H_CU_RMS.png"
+        image_path = r"C:\rootech\AutoProgram\VisionTest\image_test\vol_pow\10.10.26.156_2024-08-09_09_48_40_M_H_CU_RMS.png"
+        base_save_path = r"C:\rootech\AutoProgram\VisionTest\results\test"
         roi_keys = [ConfigROI.m_curr_rms_title, ConfigROI.m_curr_rms_1, ConfigROI.m_curr_rms_2, ConfigROI.m_curr_rms_3]
         print(roi_keys) 
         setup = 1
         ocr_results = paddleocr_func.paddleocr_basic(image=image_path, roi_keys=roi_keys, test_type=setup)
-        eval_results = func_evalution.eval_demo_test(ocr_res=ocr_results, correct_answers=ConfigROI.m_curr_rms_fixed_text.value, test_step= 221,)
+        demo_test_result, ocr_error, ocr_missing_item, ocr_fixed_text, ocr_measurement_text, ocr_percent_text, ocr_timestamp_text = func_evalution.eval_demo_test(ocr_res=ocr_results, correct_answers=ConfigROI.m_curr_rms_fixed_text.value, test_step= 221, reset_time=1723164495, image_path=image_path)
+        func_evalution.demo_test_save_csv(
+        base_save_path=base_save_path,
+        img_path=image_path,
+        ocr_fixed_text=ocr_fixed_text,
+        ocr_error=ocr_error,
+        right_error=ocr_missing_item,
+        test_result=demo_test_result,
+        ocr_measurement=ocr_measurement_text,
+        ocr_meas_percent=ocr_percent_text,
+        ocr_meas_timestamp=ocr_timestamp_text,
+        )
         print(ocr_results)
-        print(eval_results)
+        print(demo_test_result)
 
     def test002(self):
         for i in range(3):

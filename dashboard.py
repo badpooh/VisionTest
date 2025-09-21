@@ -322,10 +322,10 @@ class TestWorker(QThread):
         self.search_pattern = os.path.join(image_directory, f'./**/*{self.dashboard.selected_ip}*.png')
         self.test_mode = None
         self.current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        if current_folder_name.lower() == "vision":
+        if current_folder_name.lower() == "visiontest":
             self.base_save_path = os.path.expanduser(f"./results/{self.current_time}/")
         else:
-            self.base_save_path = os.path.expanduser(f"./vision/results/{self.current_time}/")
+            self.base_save_path = os.path.expanduser(f"./visiontest/results/{self.current_time}/")
         
         os.makedirs(self.base_save_path, exist_ok=True)
         self.test_map = {
