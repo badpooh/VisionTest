@@ -6,13 +6,13 @@ import shutil
 import os
 import glob
 import pandas as pd
+import math
 from collections import Counter
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.pdu import ExceptionResponse
 from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.constants import Endian
 import time
-import datetime
 
 from function.func_ocr import PaddleOCRManager
 from function.func_connection import ConnectionManager
@@ -53,7 +53,7 @@ class Evaluation:
         return self.latest_image_path
 
     ### With Demo Balance ###
-    def eval_demo_test(self, ocr_res, correct_answers, test_step, reset_time=None, image_path=None, img_result=None):
+    def eval_test_mode_balance(self, ocr_res, correct_answers, test_step, meas_modbus_value, reset_time=None, modbus_meas_value=None, modbus_timestamp_value=None, image_path=None):
         self.demo_test_result = False
         self.measurement_error = False
         self.condition_met = False
@@ -61,7 +61,9 @@ class Evaluation:
         image = cv2.imread(image_path)
 
         def validate_percent(percent_list, lower_limit, upper_limit):
+            results_list = []
             percent_error = False
+
             for item in percent_list:
                 match = re.match(r"([-+]?\d+\.?\d*)\s*(.*)", item)
 
@@ -70,31 +72,46 @@ class Evaluation:
                     unit = match.group(2).strip()
 
                     if unit == '%' and lower_limit < numeric_value < upper_limit:
-                        print(f"'{item}' -> (PASS)")
+                        print(f"'{item}' -> PASS")
+                        result = f"{item} -> PASS"
+                        results_list.append(result)
+                    
                     else:
                         print(f"'{item}' -> (FAIL / 단위 또는 범위 오류)")
                         percent_error = True
+                        result = f"{item} -> FAIL"
+                        results_list.append(result)
                 else:
                     print(f"'{item}' -> (INFO - Skipping non-numeric text)")
             
-            return percent_error
+            return percent_error, results_list
         
         def validate_timestamp(timestamp_list, reset_time):
+            results_list = []
+            numeric_list = []
             timestamp_error = False
+
             for item in timestamp_list:
-                dt_object = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
+                dt_object = datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
                 unix_timestamp = dt_object.timestamp()
 
                 if reset_time - 30 < unix_timestamp < reset_time + 30:
-                    print(f"'{item}' -> (PASS)")
+                    print(f"'{item}' -> PASS")
+                    result = f"{item} -> PASS"
+                    results_list.append(result)
+                    numeric_list.append(unix_timestamp)
                 else:
                     print(f"'{item}' -> (FAIL - 단위 또는 범위 오류)")
                     timestamp_error = True
+                    result = f"{item} -> FAIL"
+                    results_list.append(result)
+                    numeric_list.append(unix_timestamp)
             
-            return timestamp_error
+            return timestamp_error, results_list, numeric_list
         
         def validate_measurement(measurement_list, lower_limit, upper_limit, right_unit):
             results_list = []
+            numeric_list = []
 
             for item in measurement_list:
                 match = re.match(r"([-+]?\d+\.?\d*)\s*(.*)", item) #[-+]?<기호>  \d+<숫자>  \.?<소수점>  \d*<숫자>)  \s*<공백>  (.*<나머지그룹>
@@ -103,24 +120,58 @@ class Evaluation:
                     unit = match.group(2).strip()
 
                     if lower_limit < numeric_value < upper_limit and unit == right_unit:
-                        result = f"{item} -> (PASS)"
-                        print(f"'{item}' -> (PASS)")
+                        print(f"'{item}' -> PASS")
+                        result = f"{item} -> PASS"
                         results_list.append(result)
+                        numeric_list.append(numeric_value)
                     else:
                         print(f"'{item}' -> (FAIL / 단위 또는 범위 오류)")
                         self.measurement_error = True
-                        result = f"{item} -> (FAIL)"
+                        result = f"{item} -> FAIL"
                         results_list.append(result)
+                        numeric_list.append(numeric_value)
 
-            return self.measurement_error, results_list
+            return self.measurement_error, results_list, numeric_list
+        
+        def validate_modbus(modbus_value, right_value):
+            formatted_value = []
+            modbus_error = False
 
+            value = abs(modbus_value)
+            if value >= 1000:
+                value = value / 1000
+
+            if round(value, 1) >= 100:
+               for_value = f'{value:.1f}'
+               formatted_value.append(for_value)
+            elif round(value, 2) >= 10:
+                for_value = f'{value:.2f}'
+                formatted_value.append(for_value)
+            elif round(value, 3) >= 1:
+                for_value = f'{value:.3f}'
+                formatted_value.append(for_value)
+            else:
+                for_value = f'{value:.3f}'
+                formatted_value.append(for_value)
+            
+            formatted_value_counter = Counter(formatted_value)
+            right_value_counter = Counter(right_value)
+
+            value_error = list((formatted_value_counter - right_value_counter).elements())
+            if value_error:
+                modbus_error = True
+
+            print(value_error, modbus_error)
+
+            return modbus_error, value_error
+ 
         ### 고정 문자 가공 ###
         ocr_fixed_text = [result.strip() for result in ocr_res[:2]]
         ####################
 
         ### 변동 문자 가공 ###
-        ocr_percent_text_tuple = re.findall(r'(\d+\.\d+\s*%)|([A-Z]+\s*%)', ocr_res[2])
-        ocr_percent_text = [item1 + item2 for item1, item2 in ocr_percent_text_tuple]
+        ocr_ratio_text_tuple = re.findall(r'(\d+\.\d+\s*%)|([A-Z]+\s*%)', ocr_res[2])
+        ocr_ratio_text = [item1 + item2 for item1, item2 in ocr_ratio_text_tuple]
         ocr_timestamp_text = re.findall(r'\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}', ocr_res[2])
         ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[3])
         ####################
@@ -134,14 +185,19 @@ class Evaluation:
         ####################
         
         all_meas_results = []
+        all_modbus_results = []
 
         ### 검사 test_step 개념: Relay:1, Meter:2, CURRENT:02, RMS:001, LL:0001
 
         if test_step == 221:
-            all_meas_results.append(validate_percent(ocr_percent_text, 49.5, 50.5))
-            all_meas_results.append(validate_timestamp(ocr_timestamp_text, reset_time))
-            meas_error, meas_results = validate_measurement(ocr_measurement_text, 2.495, 2.505, "A")
+            ratio_error, ratio_results = validate_percent(ocr_ratio_text, 49.5, 50.5)
+            all_meas_results.append(ratio_error)
+            timestamp_error, timestamp_results, timestamp_numeric_list = validate_timestamp(ocr_timestamp_text, reset_time)
+            all_meas_results.append(timestamp_error)
+            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, 2.495, 2.505, "A")
             all_meas_results.append(meas_error)
+            meas_modbus_error, meas_modbus_results = validate_modbus(meas_modbus_value, meas_numeric_list)
+            all_modbus_results.append(meas_modbus_error)
         
         elif not self.condition_met:
             print("Nothing matching word")
@@ -149,11 +205,59 @@ class Evaluation:
         for item in all_meas_results:
             if item == True:
                 self.demo_test_result = True
+        
+        for item in all_modbus_results:
+            if item == True:
+                self.demo_test_result = True
 
         print(f"OCR - 정답: {ocr_error}")
         print(f"정답 - OCR: {ocr_missing_item}")
 
-        return self.demo_test_result, ocr_error, ocr_missing_item, ocr_fixed_text, meas_results, ocr_percent_text, ocr_timestamp_text
+        return self.demo_test_result, ocr_error, ocr_missing_item, ocr_fixed_text, ratio_results, timestamp_results, meas_results, meas_modbus_results
+    
+    def test_mode_save_csv(self, base_save_path, img_path, ocr_fixed_text, ocr_error, right_error, test_result=False, ocr_meas_ratio=None, ocr_meas_timestamp=None, ocr_measurement=None,):
+        """
+        img_path: 이미지경로 + 이미지파일 제목 -> csv 파일 제목이 됨
+        base_save_path: CSV/이미지 저장할 폴더
+        img_path:   원본 이미지 파일 경로
+        ocr_fixed_text: str, 고정 문자
+        
+        """
+
+        if test_result or ocr_error or right_error:
+            overall_result = "FAIL"
+        else:
+            overall_result = "PASS"
+            
+        results_dict = {
+                        # "Overall Result": overall_result,
+                        "Data View Fixed text": str(ocr_fixed_text),
+                        "OCR Errors (Extra)": f"{ocr_error} ({'FAIL' if ocr_error else 'PASS'})",
+                        "OCR Errors (Missing)": f"{right_error} ({'FAIL' if right_error else 'PASS'})",
+                        "Meas Ratio Results": str(ocr_meas_ratio),
+                        "Timestamp Results": str(ocr_meas_timestamp),
+                        "Measurement Results": str(ocr_measurement),
+                        # "Image Match": img_result,
+                        # "Invalid Elements (H.Text)": str(invalid_elements)
+                        }
+
+        df = pd.DataFrame(list(results_dict.items()), columns=['Parameter', 'Value'])
+
+        # Saving the CSV
+        file_name_with_extension = os.path.basename(img_path)
+        ip_to_remove = f"{self.connect_manager.SERVER_IP}_"
+        if file_name_with_extension.startswith(ip_to_remove):
+            file_name_without_ip = file_name_with_extension[len(ip_to_remove):]
+        else:
+            file_name_without_ip = file_name_with_extension
+
+        image_file_name = os.path.splitext(file_name_without_ip)[0]
+        
+        save_path = os.path.join(base_save_path, f"{overall_result}_ocr_{image_file_name}.csv")
+
+        df.to_csv(save_path, index=False)
+        dest_image_path = os.path.join(base_save_path, file_name_without_ip)
+        shutil.copy(img_path, dest_image_path)
 
     ### No source, No Demo ###
     def eval_none_test(self, ocr_res, right_key, ocr_res_meas=None, image_path=None, img_result=None):
@@ -754,49 +858,6 @@ class Evaluation:
                 time_results.append(f"{time_str} / format error (FAIL)")
         return time_results
 
-    def demo_test_save_csv(self, base_save_path, img_path, ocr_fixed_text, ocr_error, right_error, test_result=False, meas_error=False, ocr_measurement=None, ocr_meas_percent=None, ocr_meas_timestamp=None):
-        """
-        img_path: 이미지경로 + 이미지파일 제목 -> csv 파일 제목이 됨
-        base_save_path: CSV/이미지 저장할 폴더
-        img_path:   원본 이미지 파일 경로
-        ocr_fixed_text: str, 고정 문자
-        
-        """
-
-        if test_result or ocr_error or right_error or meas_error:
-            overall_result = "FAIL"
-        else:
-            overall_result = "PASS"
-            
-        results_dict = {
-                        # "Overall Result": overall_result,
-                        "Data View Fixed text": str(ocr_fixed_text),
-                        "OCR Errors (Extra)": f"{ocr_error} ({'FAIL' if ocr_error else 'PASS'})",
-                        "OCR Errors (Missing)": f"{right_error} ({'FAIL' if right_error else 'PASS'})",
-                        "Measurement Results": str(ocr_measurement),
-                        "Meas Ratio Results": str(ocr_meas_percent),
-                        "Timestamp Results": str(ocr_meas_timestamp),
-                        # "Image Match": img_result,
-                        # "Invalid Elements (H.Text)": str(invalid_elements)
-                        }
-
-        df = pd.DataFrame(list(results_dict.items()), columns=['Parameter', 'Value'])
-
-        # Saving the CSV
-        file_name_with_extension = os.path.basename(img_path)
-        ip_to_remove = f"{self.connect_manager.SERVER_IP}_"
-        if file_name_with_extension.startswith(ip_to_remove):
-            file_name_without_ip = file_name_with_extension[len(ip_to_remove):]
-        else:
-            file_name_without_ip = file_name_with_extension
-
-        image_file_name = os.path.splitext(file_name_without_ip)[0]
-        
-        save_path = os.path.join(base_save_path, f"{overall_result}_ocr_{image_file_name}.csv")
-
-        df.to_csv(save_path, index=False)
-        dest_image_path = os.path.join(base_save_path, file_name_without_ip)
-        shutil.copy(img_path, dest_image_path)
 
     def setup_save_csv(self, setup_result, modbus_result, img_path, base_save_path, overall_result, title):
         """

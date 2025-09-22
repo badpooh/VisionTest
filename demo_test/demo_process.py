@@ -16,7 +16,7 @@ image_directory = r"\\10.10.20.30\screenshot"
 paddleocr_func = PaddleOCRManager()
 
 class DemoTest(QObject):
-     
+	 
 	touch_manager = TouchManager()
 	modbus_label = ModbusLabels()
 	eval_manager = Evaluation()
@@ -30,8 +30,16 @@ class DemoTest(QObject):
 		self.accruasm_state = state
 		# print(f"SetupProcess: AccuraSM checked={state}")
 
-	def setup_ocr_process(self, base_save_path, search_pattern, roi_keys, except_address, access_address, setup_answer_key, template_path, roi_mask, modbus_ref, eval_type=0, refresh=None, coordinates=None, modbus_unit=None, compare_exc=None):
-		sm_condition = False
+	def test_mode_ocr_process(self, 
+					   	base_save_path, 
+						search_pattern, 
+						test_step, 
+						roi_keys, 
+						correct_answers, 
+						addr_meas,
+						addr_timestamp=None,
+						reset_time=None,
+						modbus_unit=None,):
 		"""
 		Args:
 			base_save_path (str): 결과 저장 디렉토리
@@ -50,90 +58,52 @@ class DemoTest(QObject):
 		time.sleep(0.6)
 		self.touch_manager.screenshot()
 		image_path = self.eval_manager.load_image_file(search_pattern)
-		setup = 1
-		ocr_results = paddleocr_func.paddleocr_basic(image=image_path, roi_keys=roi_keys, test_type=setup)
-		except_addr = {except_address}
-		target_address = except_address
-		setup_expected_value = setup_answer_key
-		if compare_exc == 1:
-			compare_title = roi_keys[0].value[1][0]
-		else:
-			compare_title = roi_keys[0].value[0]
+		ocr_results = paddleocr_func.paddleocr_basic(image=image_path, roi_keys=roi_keys)
+		addr_measurement = addr_meas
+		modbus_meas_result = self.modbus_label.read_float(address=addr_meas)
+		if addr_timestamp:
+			modbus_timestamp_result = self.modbus_label.read_float(address=addr_timestamp)
 		
-		if roi_keys[1] == ConfigROI.s_primary_reference_vol_3:
-			parts = setup_answer_key.split(',')
-			numeric_part_with_space = parts[0]
-			setup_expected_value = numeric_part_with_space.strip()
-
-			ocr_1 = ocr_results[1]
-			parts_ocr = ocr_1.split(',')
-			numeric_part_with_space4 = parts_ocr[0]
-			ocr_1 = numeric_part_with_space4.strip()
-			ocr_results[1] = ocr_1
-
-		if roi_keys[1] == ConfigROI.s_primary_reference_vol_4:
-			parts = setup_answer_key.split(',')
-			numeric_part_with_space = parts[-1]
-			setup_expected_value = numeric_part_with_space.strip()
-
-			ocr_1 = ocr_results[1]
-			parts_ocr = ocr_1.split(',')
-			numeric_part_with_space4 = parts_ocr[-1]
-			ocr_1 = numeric_part_with_space4.strip()
-			ocr_results[1] = ocr_1
-			
-		if self.accruasm_state == 2 and refresh == 'event':
-			self.autogui_manager.m_s_event_refresh(image_path, base_save_path, compare_title)
-			time.sleep(2.0)
-			sm_res, sm_condition = self.autogui_manager.find_and_click(template_path, image_path, base_save_path, compare_title, roi_mask=roi_mask)
-
-		elif self.accruasm_state == 2:
-			self.autogui_manager.m_s_meas_refresh(image_path, base_save_path, compare_title)
-			time.sleep(2.0)
-			sm_res, sm_condition = self.autogui_manager.find_and_click(template_path, image_path, base_save_path, compare_title, roi_mask=roi_mask)
-
-		else:
-			sm_res = None
-			self.accruasm_state = None
-		title, setup_result, modbus_result, overall_result = self.eval_manager.eval_setup_test(
-			ocr_res=ocr_results,
-			setup_expected_value=setup_expected_value,
-			title=compare_title,
-			ecm_access_address=access_address,
-			ecm_address=target_address,
-			except_addr=except_addr,
-			sm_res=sm_res,
-			sm_condition = sm_condition,
-			modbus_ref=modbus_ref,
-			modbus_unit=modbus_unit,
-			eval_type=eval_type,
+		demo_test_result, ocr_error, ocr_missing_item, ocr_fixed_text, ocr_measurement_text, ocr_ratio_text, ocr_timestamp_text = self.eval_manager.eval_test_mode_balance(
+			ocr_res=ocr_results, 
+			correct_answers=correct_answers, 
+			test_step= test_step,
+			modbus_meas_value = modbus_meas_result,
+			modbus_timestamp_value=None,
+			reset_time=None, 
+			image_path=image_path,
 			)
-		self.eval_manager.setup_save_csv(setup_result, modbus_result, image_path, base_save_path, overall_result, title)
+		self.eval_manager.test_mode_save_csv(
+		base_save_path=base_save_path,
+		img_path=image_path,
+		ocr_fixed_text=ocr_fixed_text,
+		ocr_error=ocr_error,
+		right_error=ocr_missing_item,
+		test_result=demo_test_result,
+		ocr_measurement=ocr_measurement_text,
+		ocr_meas_ratio=ocr_ratio_text,
+		ocr_meas_timestamp=ocr_timestamp_text,)
 		time.sleep(0.5)
 
 	def config_setup_action(self,
-                       main_menu=None,
-                       side_menu=None,
-                       data_view=None,
-                       password=None,
-                       popup_btn=None,
-                       number_input=None,
-                       apply_btn=True,
-                       roi_keys=None,
-                       except_addr=None,
-					   access_address=None,
-                       setup_answer_key=None,
-					   modbus_answer_key=None,
-					   modbus_unit=None,
-                       template_path=None,
-                       roi_mask=None,
-                       search_pattern=None,
-                       base_save_path=None,
-					   refresh=None,
-					   eval_type=None,
+					   main_menu=None,
+					   side_menu=None,
+					   data_view=None,
+					   password=None,
+					   popup_btn=None,
+					   number_input=None,
+					   apply_btn=True,
+					   test_step=None,
+					   roi_keys=None,
+					   correct_answers=None, 
+						addr_meas=None,
+						addr_timestamp=None,
+						reset_time=None,
+						modbus_unit=None,
+					   search_pattern=None,
+					   base_save_path=None,
 					   key_type=None,
-					   compare_exc=None,
-                       title_desc=None):
+					   ):
 		"""
 		예시 인자:
 		- main_menu: ConfigTouch.touch_main_menu_1.value
@@ -169,50 +139,47 @@ class DemoTest(QObject):
 		if apply_btn:
 			self.touch_manager.touch_menu(ConfigTouch.touch_btn_apply.value)
 
-		if (roi_keys and except_addr and setup_answer_key and template_path and roi_mask
-			and base_save_path and search_pattern):
-			self.setup_ocr_process(
-				base_save_path,
-				search_pattern,
-				roi_keys=roi_keys,
-				except_address=except_addr,
-				access_address=access_address,
-				setup_answer_key=setup_answer_key,
-				template_path=template_path,
-				roi_mask=roi_mask,
-				refresh=refresh,
-				modbus_ref=modbus_answer_key,
-				modbus_unit=modbus_unit,
-				eval_type=eval_type,
-				compare_exc=compare_exc
-			)
+		if (roi_keys and base_save_path and search_pattern):
+			self.test_mode_ocr_process(
+				base_save_path=base_save_path, 
+						search_pattern=search_pattern, 
+						test_step=test_step, 
+						roi_keys=roi_keys, 
+						correct_answers=correct_answers, 
+						addr_meas=addr_meas,
+						addr_timestamp=None,
+						reset_time=None,
+						modbus_unit=None,
+						)
 		else:
-			print(f"[DEBUG] Not calling setup_ocr_process for {title_desc} because some param is missing.")
+			print(f"[DEBUG] Not calling setup_ocr_process for because some param is missing.")
 
-	def meter_demo_test_balance(self, base_save_path, search_pattern):
+	def meter_test_mode_balance(self, base_save_path, search_pattern):
 		self.touch_manager.uitest_mode_start()
+		self.modbus_label.test_mode_balance_setting()
 
-		self.touch_manager.btn_front_meter()
+		reset_time = self.modbus_label.reset_max_min()
 		
-        ###
-
+		self.touch_manager.btn_front_meter()
+		self.touch_manager.btn_front_home()
+		
 		### wiring -> Delta
 		self.config_setup_action(
-			main_menu=ConfigTouch.touch_main_menu_1.value,
+			main_menu=ConfigTouch.touch_main_menu_2.value,
 			side_menu=ConfigTouch.touch_side_menu_1.value,
-			data_view=None,
+			data_view=ConfigTouch.touch_toggle_max.value,
 			password=None,
 			popup_btn=None, 
 			number_input=None,
 			apply_btn=None,
-			roi_keys=[ConfigROI.m_curr_rms_title],
-			except_addr=None,
-			access_address=None,
-			setup_answer_key=None,
-			modbus_answer_key=None,
-			eval_type=None,
+			test_step=221,
+			roi_keys=[ConfigROI.m_curr_rms_title, ConfigROI.m_curr_rms_1, ConfigROI.m_curr_rms_2, ConfigROI.m_curr_rms_3],
+			correct_answers=ConfigROI.m_curr_rms_fixed_text.value,
+			addr_meas=[ConfigMap.addr_meas_max_ia.value, ConfigMap.addr_meas_max_ib.value, ConfigMap.addr_meas_max_ic.value],
+			addr_timestamp=None,
+			reset_time=reset_time,
 			modbus_unit=None,
-			template_path=None,
-			roi_mask=None,
 			search_pattern=search_pattern,
-			base_save_path=base_save_path)
+			base_save_path=base_save_path,
+			key_type=None,
+			)

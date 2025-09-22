@@ -32,7 +32,7 @@ class PaddleOCRManager:
     def update_phasor_condition(self, new_c):
         self.phasor_condition = new_c
 
-    def paddleocr_basic(self, image, roi_keys, test_type):
+    def paddleocr_basic(self, image, roi_keys):
         execution_directory = os.getcwd()
 
         rec_model_folder_path = os.path.join(execution_directory, 'ppocr', 'rec', 'en_PP-OCRv5_mobile_rec_infer')
@@ -62,21 +62,7 @@ class PaddleOCRManager:
 
         ocr_results = {}
         for roi_key in roi_keys:
-            # ---- 기존 전처리 로직 유지 ----
-            if self.phasor_condition == 0 and test_type == 0:
-                self.update_n(3)
-                resized_image = cv2.resize(image, None, fx=self.n, fy=self.n, interpolation=cv2.INTER_CUBIC)
-                denoised_image = cv2.fastNlMeansDenoisingColored(resized_image, None, 10, 30, 9, 21)
-                kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-                sharpened_image = cv2.filter2D(denoised_image, -1, kernel)
-            elif self.phasor_condition == 1 and test_type == 0:
-                self.update_n(3)
-                sharpened_image = cv2.resize(image, None, fx=self.n, fy=self.n, interpolation=cv2.INTER_CUBIC)
-            elif test_type == 1:
-                self.update_n(1)
-                sharpened_image = image
-            else:
-                print(f"Error {self.phasor_condition}")
+            self.update_n(1)
 
             if roi_key in self.rois:
                 extracted_texts = []
@@ -88,8 +74,6 @@ class PaddleOCRManager:
                 # cv2.waitKey(0)
                 # cv2.destroyAllWindows()
 
-                # (2) v5 호출: predict 사용, cls 인자 제거
-                # 필요시 호출 시점에 모듈 토글을 다시 지정할 수도 있습니다.
                 # pred_list = ocr.predict(roi_image, use_textline_orientation=False)
                 pred_list = ocr.predict(roi_image)
                 

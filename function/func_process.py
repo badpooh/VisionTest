@@ -4,37 +4,18 @@ from function.func_modbus import ConnectionManager
 
 class TestProcess:
     
-    def __init__(self, setup_test: SetupTest, connect_manager: ConnectionManager, score_callback=None, stop_callback=None):
-        self.test_mode = None
+    def __init__(self, setup_test: SetupTest, test_mode: DemoTest, connect_manager: ConnectionManager, score_callback=None, stop_callback=None):
         self.score_callback = score_callback
         self.stop_callback = stop_callback 
-        self.demo_test = None
+        self.test_mode = test_mode
         self.setup_test = setup_test
         self.connect_manager = connect_manager
-        # self.setup_test = None
-
-    def get_demo_test_instance(self):
-        if self.demo_test is None:
-            self.demo_test = DemoTest(score_callback=self.score_callback, stop_callback=self.stop_callback)
-        return self.demo_test
-    
-    # def get_setup_test_instance(self):
-    #     if self.setup_test is None:
-    #         self.setup_test = SetupTest()
-    #     return self.setup_test
     
     def test_by_name(self, test_name, base_save_path, test_mode, search_pattern):
-        demo_test = self.get_demo_test_instance()
-        # setup_test = self.get_setup_test_instance()
-
-        if test_name.strip().lower() == "tm_balance":
-            demo_test.demo_test_mode()
-        elif test_name.strip().lower() == "tm_noload":
-            demo_test.noload_test_mode()
         
         if test_mode == "Demo" or "NoLoad":
-            if test_name == "vol_all":
-                demo_test.meter_demo_test_balance(base_save_path, test_mode, search_pattern)
+            if test_name == "tm_balance":
+                self.test_mode.meter_test_mode_balance(base_save_path, search_pattern)
 
             ### Meter 설정 ###
             elif test_name == 'm_s_meas_all':

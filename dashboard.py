@@ -31,7 +31,7 @@ class MyDashBoard(QMainWindow, Ui_MainWindow):
     cb_StateChanged = Signal(int)
     cb_AccuraSMChanged = Signal(int)
 
-    def __init__(self, setup_test_instance: SetupTest):
+    def __init__(self, setup_test_instance: SetupTest, test_mode_instance: DemoTest):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle("My DashBoard")
@@ -46,6 +46,7 @@ class MyDashBoard(QMainWindow, Ui_MainWindow):
         self.stop_thread = False
         self.selected_ip = ''
         self.setup_test_instance = setup_test_instance
+        self.test_mode_instance = test_mode_instance
         self.connect_manager = ConnectionManager()
         self.alarm = Alarm()
         self.setting_window = SettingWindow()
@@ -234,7 +235,7 @@ class MyDashBoard(QMainWindow, Ui_MainWindow):
             self.stop_thread = False # 스레드 중지 플래그 초기화 (필요하다면)
 
             # TestWorker 생성 시 self.setup_test_instance 전달
-            self.worker = TestWorker(self.tableWidget, self, self.setup_test_instance, self.connect_manager)
+            self.worker = TestWorker(self.tableWidget, self, self.setup_test_instance, self.test_mode_instance, self.connect_manager)
 
             self.worker.progress.connect(self.on_progress)
             self.worker.finished.connect(self.on_finished)
@@ -306,7 +307,7 @@ class TestWorker(QThread):
     finished = Signal()          # 전체 테스트 완료 신호
     modbus_label = ModbusLabels()
 
-    def __init__(self, tableWidget, dashboard_instance: MyDashBoard, setup_test_instance: SetupTest, connect_manager: ConnectionManager):
+    def __init__(self, tableWidget, dashboard_instance: MyDashBoard, setup_test_instance: SetupTest, test_mode_instance: DemoTest, connect_manager: ConnectionManager):
         
         current_working_directory = os.getcwd()
         current_folder_name = os.path.basename(current_working_directory)
@@ -318,6 +319,7 @@ class TestWorker(QThread):
         self.stopRequested = False
         self.meter_demo_test = DemoTest()
         self.setup_test_instance = setup_test_instance
+        self.test_mode_instance = test_mode_instance
         self.connect_manager = connect_manager
         self.search_pattern = os.path.join(image_directory, f'./**/*{self.dashboard.selected_ip}*.png')
         self.test_mode = None
@@ -329,9 +331,9 @@ class TestWorker(QThread):
         
         os.makedirs(self.base_save_path, exist_ok=True)
         self.test_map = {
-            "tm_all": lambda: print("not yet"),
-            "tm_balance": partial(self.execute_test_mode, self.meter_demo_test.demo_test_mode),
-            "tm_noload": partial(self.execute_test_mode, self.meter_demo_test.noload_test_mode),
+            # "tm_all": lambda: print("not yet"),
+            # "tm_balance": partial(self.execute_test_mode, self.meter_demo_test.meter_test_mode_balance),
+            # "tm_noload": partial(self.execute_test_mode, self.meter_demo_test.noload_test_mode),
             "m_s_initialize": lambda: self.modbus_label.setup_initialization(),
         }
         for key, method_name in sl.DASHBORAD_TEST[0:31]:
@@ -379,24 +381,25 @@ class TestWorker(QThread):
                 print("CONTENT가 비어있음")
                 continue
 
-            row_start_time = self.meter_demo_test.modbus_label.device_current_time()
+            row_start_time = self.meter_demo_test.modbus_label.system_time_read()
 
             test_process = TestProcess(
                 setup_test=self.setup_test_instance,
+                test_mode=self.test_mode_instance,
                 score_callback = lambda score: self.result_callback(score, row),
                 stop_callback = lambda: self.stopRequested,
                 connect_manager=self.connect_manager
             )
 
             for test_name in test_list:
-                if test_name == "tm_balance":
-                    # 이미 self.test_mode가 None이면 새로 세팅, 아니면 유지
-                    self.execute_test_mode(self.meter_demo_test.demo_test_mode)
+                # if test_name == "tm_balance":
+                #     # 이미 self.test_mode가 None이면 새로 세팅, 아니면 유지
+                #     self.execute_test_mode(self.meter_demo_test.test_mode_ocr_process(self.base_save_path, self.search_pattern))
                     
-                elif test_name == "tm_noload":
-                    self.execute_test_mode(self.meter_demo_test.noload_test_mode)
+                # if test_name == "tm_noload":
+                #     self.execute_test_mode(self.meter_demo_test.noload_test_mode)
 
-                elif test_name == "m_s_initialize":
+                if test_name == "m_s_initialize":
                     self.modbus_label.setup_initialization()
                 else :
                     test_process.test_by_name(
@@ -414,7 +417,7 @@ class TestWorker(QThread):
                 result = "Setup Initializtion Complete"
                 self.dashboard.on_tc_score(row, result)
             else:
-                row_end_time = self.meter_demo_test.modbus_label.device_current_time()
+                row_end_time = self.meter_demo_test.modbus_label.system_time_read()
 
                 total_csv_files, fail_count = self.meter_demo_test.evaluation.count_csv_and_failures(
                     self.base_save_path, row_start_time, row_end_time
