@@ -53,14 +53,14 @@ class Evaluation:
         return self.latest_image_path
 
     ### With Demo Balance ###
-    def eval_test_mode_balance(self, ocr_res, correct_answers, test_step, modbus_meas_value, reset_time=None, modbus_timestamp_value=None, image_path=None):
+    def eval_test_mode_balance(self, ocr_res, correct_answers, modbus_meas_value, meas_lower, meas_upper, meas_unit, ratio_lower=None, ratio_upper=None, reset_time=None, modbus_timestamp_value=None, image_path=None):
         self.demo_test_result = False
         self.measurement_error = False
         self.condition_met = False
         
         image = cv2.imread(image_path)
 
-        def validate_percent(percent_list, lower_limit, upper_limit):
+        def validate_ratio(percent_list, lower_limit, upper_limit):
             results_list = []
             percent_error = False
 
@@ -218,11 +218,11 @@ class Evaluation:
         ### LL:0001 LN:0002,
         ### Min:00001 Max:00002
         if ocr_ratio_text and ocr_timestamp_text:
-            ratio_error, ratio_results = validate_percent(ocr_ratio_text, 49.5, 50.5)
+            ratio_error, ratio_results = validate_ratio(ocr_ratio_text, ratio_lower, ratio_upper)
             all_meas_results.append(ratio_error)
             timestamp_error, timestamp_results, timestamp_numeric_list = validate_timestamp(ocr_timestamp_text, reset_time)
             all_meas_results.append(timestamp_error)
-            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, 24.8, 25.2, "A")
+            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, meas_lower, meas_upper, meas_unit)
             all_meas_results.append(meas_error)
             print(modbus_meas_value)
             meas_modbus_error, meas_modbus_results = validate_modbus(modbus_meas_value, meas_numeric_list)
@@ -231,14 +231,14 @@ class Evaluation:
         elif not ocr_ratio_text and ocr_timestamp_text:
             timestamp_error, timestamp_results, timestamp_numeric_list = validate_timestamp(ocr_timestamp_text, reset_time)
             all_meas_results.append(timestamp_error)
-            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, 189.6, 190.4, "V")
+            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, meas_lower, meas_upper, meas_unit)
             all_meas_results.append(meas_error)
             print(modbus_meas_value)
             meas_modbus_error, meas_modbus_results = validate_modbus(modbus_meas_value, meas_numeric_list)
             all_modbus_results.append(meas_modbus_error)
         
         elif not ocr_ratio_text and not ocr_timestamp_text:
-            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, 189.6, 190.4, "V")
+            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, meas_lower, meas_upper, meas_unit)
             all_meas_results.append(meas_error)
             print(modbus_meas_value)
             meas_modbus_error, meas_modbus_results = validate_modbus(modbus_meas_value, meas_numeric_list)

@@ -11,6 +11,9 @@ from config.config_demo_roi import ConfigROI
 from config.config_map import ConfigMap
 from config.config_map import ConfigInitialValue as civ
 from config.config_ref import ConfigImgRef
+from config.config_test_mode_value import TestModeBalance as tmb
+
+
 
 image_directory = r"\\10.10.20.30\screenshot"
 paddleocr_func = PaddleOCRManager()
@@ -32,12 +35,16 @@ class DemoTest(QObject):
 
 	def test_mode_ocr_process(self, 
 					   	base_save_path, 
-						search_pattern, 
-						test_step, 
+						search_pattern,  
 						roi_keys, 
 						correct_answers, 
 						addr_meas,
 						aggre_selection,
+						meas_lower,
+						meas_upper,
+						meas_unit,
+						ratio_lower=None,
+						ratio_upper=None,
 						addr_timestamp=None,
 						reset_time=None,
 						modbus_unit=None,):
@@ -68,7 +75,11 @@ class DemoTest(QObject):
 		demo_test_result, ocr_error, ocr_missing_item, ocr_fixed_text, ocr_ratio_text, ocr_timestamp_text, ocr_measurement_text, modbus_results = self.eval_manager.eval_test_mode_balance(
 			ocr_res=ocr_results, 
 			correct_answers=correct_answers, 
-			test_step=test_step,
+			ratio_lower=ratio_lower,
+			ratio_upper=ratio_upper,
+			meas_lower=meas_lower,
+			meas_upper=meas_upper,
+			meas_unit=meas_unit,
 			modbus_meas_value=modbus_meas_result,
 			modbus_timestamp_value=None,
 			reset_time=reset_time, 
@@ -97,9 +108,13 @@ class DemoTest(QObject):
 					   popup_btn=None,
 					   number_input=None,
 					   apply_btn=True,
-					   test_step=None,
 					   roi_keys=None,
-					   correct_answers=None, 
+					   correct_answers=None,
+					   ratio_lower=None,
+						ratio_upper=None,
+						meas_lower=None,
+						meas_upper=None,
+						meas_unit=None,
 						addr_meas=None,
 						addr_timestamp=None,
 						aggre_selection=None,
@@ -148,10 +163,14 @@ class DemoTest(QObject):
 			self.test_mode_ocr_process(
 						base_save_path=base_save_path, 
 						search_pattern=search_pattern, 
-						test_step=test_step, 
 						roi_keys=roi_keys, 
 						correct_answers=correct_answers, 
 						addr_meas=addr_meas,
+						meas_lower=meas_lower,
+						meas_upper=meas_upper,
+						meas_unit=meas_unit,
+						ratio_lower=ratio_lower,
+						ratio_upper=ratio_upper,
 						aggre_selection=aggre_selection,
 						addr_timestamp=None,
 						reset_time=reset_time,
@@ -178,9 +197,11 @@ class DemoTest(QObject):
 			popup_btn=None, 
 			number_input=None,
 			apply_btn=None,
-			test_step=21110,
 			roi_keys=default_roi_keys,
 			correct_answers=ConfigROI.m_vol_rms_ll_fixed_text.value,
+			meas_lower=tmb.voltage_rms_ll.value[0],
+			meas_upper=tmb.voltage_rms_ll.value[1],
+			meas_unit=tmb.voltage_rms_ll.value[2],
 			addr_meas=[ConfigMap.addr_meas_vab.value, ConfigMap.addr_meas_vbc.value, ConfigMap.addr_meas_vca.value, ConfigMap.addr_meas_vavg_ll.value],
 			aggre_selection=1,
 			addr_timestamp=None,
