@@ -29,6 +29,7 @@ class ConfigMap(Enum):
     addr_rotating_sequence = (6040, 1)
     addr_sliding_reference_voltage_setup_access = {'address': 6050, 'count': 1}
     addr_sliding_reference_voltage_type = (6051, 1)
+    addr_aggregation_selection = {'address': 14900, 'count': 1}
     ### UINT32 ###
     addr_reference_voltage = (6003, 2)
     addr_vt_primary_ll_voltage = (6005, 2)
@@ -102,11 +103,42 @@ class ConfigMap(Enum):
     addr_meas_pfc = (15122, 2)
     addr_meas_pf_total = (15124, 2)
 
+    addr_meas_min_van = (31200, 2)
+    addr_meas_min_vbn = (31202, 2)
+    addr_meas_min_vcn = (31204, 2)
+    addr_meas_min_vavg_ln = (31206, 2)
+    addr_meas_min_vrsd = (31208, 2)
+    addr_meas_min_vab = (31210, 2)
+    addr_meas_min_vbc = (31212, 2)
+    addr_meas_min_vca = (31214, 2)
+    addr_meas_min_vavg_ll = (31216, 2)
+
+    addr_meas_max_van = (31000, 2)
+    addr_meas_max_vbn = (31002, 2)
+    addr_meas_max_vcn = (31004, 2)
+    addr_meas_max_vavg_ln = (31006, 2)
+    addr_meas_max_vrsd = (31008, 2)
+    addr_meas_max_vab = (31010, 2)
+    addr_meas_max_vbc = (31012, 2)
+    addr_meas_max_vca = (31014, 2)
+    addr_meas_max_vavg_ll = (31016, 2)
+
     addr_meas_max_ia = (31018, 2)
     addr_meas_max_ib = (31020, 2)
     addr_meas_max_ic = (31022, 2)
     addr_meas_max_iavg = (31024, 2)
     
+    ### Measurement Data Min Timestamp ###
+    ### FLOAT ###
+    addr_timestamp_van = (31500, 2)
+    addr_timestamp_vbn = (31502, 2)
+    addr_timestamp_vcn = (31504, 2)
+    addr_timestamp_vavg_ln = (31506, 2)
+    addr_timestamp_vrsd = (31508, 2)
+    addr_timestamp_vab = (31510, 2)
+    addr_timestamp_vbc = (31512, 2)
+    addr_timestamp_vca = (31514, 2)
+    addr_timestamp_vavg_ll = (31516, 2)
 
     ### meter event setup ###
     addr_dip_setup_access = (5100, 1)

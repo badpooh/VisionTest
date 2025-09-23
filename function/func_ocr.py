@@ -118,7 +118,7 @@ class PaddleOCRManager:
                 
                 extracted_texts = [text for coords, text, conf in original_results]
                 extracted_texts = ' '.join(extracted_texts)
-                extracted_texts = self.handle_special_cases(extracted_texts)
+                # extracted_texts = self.handle_special_cases(extracted_texts)
                 if extracted_texts:
                     ocr_results[roi_key] = extracted_texts
             else:

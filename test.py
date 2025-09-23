@@ -89,7 +89,7 @@ class test:
     def test001(self):
         image_path = r"C:\PNT\AutoProgram\VisionTest\image_test\vol_pow\10.10.26.156_2024-08-09_09_48_40_M_H_CU_RMS.png"
         base_save_path = r"C:\PNT\AutoProgram\VisionTest\results\test"
-        roi_keys = [ConfigROI.m_curr_rms_title, ConfigROI.m_curr_rms_1, ConfigROI.m_curr_rms_2, ConfigROI.m_curr_rms_3]
+        roi_keys = [ConfigROI.test_mode_balance_title, ConfigROI.test_mode_balance_phase, ConfigROI.test_mode_balance_ratio, ConfigROI.test_mode_balance_meas]
         print(roi_keys) 
         ocr_results = paddleocr_func.paddleocr_basic(image=image_path, roi_keys=roi_keys)
         demo_test_result, ocr_error, ocr_missing_item, ocr_fixed_text, ratio_results, timestamp_results, meas_results, meas_modbus_results = func_evalution.eval_test_mode_balance(ocr_res=ocr_results, correct_answers=ConfigROI.m_curr_rms_fixed_text.value, test_step= 221, reset_time=1723164495, meas_modbus_value= ss,image_path=image_path)

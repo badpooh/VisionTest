@@ -71,11 +71,17 @@ class ModbusLabels:
 			print("Noload Demo mode setting Done")
 		return test_mode
 	
-	def read_float(self, address):
+	def read_float(self, address, aggre_selection):
+		
 		list_address = isinstance(address, list)
 		address_values = address if list_address else [address]
 		
 		results = []
+
+		### Aggregation selection -> display peak ###
+		self.connect_manager.setup_client.read_holding_registers(**ConfigMap.addr_aggregation_selection.value)
+		self.connect_manager.setup_client.write_register(ConfigMap.addr_aggregation_selection.value['address'], aggre_selection)
+		self.connect_manager.setup_client.read_holding_registers(**ConfigMap.addr_aggregation_selection.value)
 		
 		for item in address_values:
 			addr = item[0] if isinstance(item, (list, tuple)) else item

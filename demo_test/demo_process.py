@@ -37,6 +37,7 @@ class DemoTest(QObject):
 						roi_keys, 
 						correct_answers, 
 						addr_meas,
+						aggre_selection,
 						addr_timestamp=None,
 						reset_time=None,
 						modbus_unit=None,):
@@ -59,18 +60,18 @@ class DemoTest(QObject):
 		self.touch_manager.screenshot()
 		image_path = self.eval_manager.load_image_file(search_pattern)
 		ocr_results = paddleocr_func.paddleocr_basic(image=image_path, roi_keys=roi_keys)
-		addr_measurement = addr_meas
-		modbus_meas_result = self.modbus_label.read_float(address=addr_meas)
+		modbus_meas_result = self.modbus_label.read_float(address=addr_meas, aggre_selection=aggre_selection)
 		if addr_timestamp:
-			modbus_timestamp_result = self.modbus_label.read_float(address=addr_timestamp)
+			modbus_timestamp_result = self.modbus_label.read_float(address=addr_timestamp, aggre_selection=255)
+
 		
-		demo_test_result, ocr_error, ocr_missing_item, ocr_fixed_text, ocr_measurement_text, ocr_ratio_text, ocr_timestamp_text = self.eval_manager.eval_test_mode_balance(
+		demo_test_result, ocr_error, ocr_missing_item, ocr_fixed_text, ocr_ratio_text, ocr_timestamp_text, ocr_measurement_text, modbus_results = self.eval_manager.eval_test_mode_balance(
 			ocr_res=ocr_results, 
 			correct_answers=correct_answers, 
-			test_step= test_step,
-			modbus_meas_value = modbus_meas_result,
+			test_step=test_step,
+			modbus_meas_value=modbus_meas_result,
 			modbus_timestamp_value=None,
-			reset_time=None, 
+			reset_time=reset_time, 
 			image_path=image_path,
 			)
 		self.eval_manager.test_mode_save_csv(
@@ -82,7 +83,10 @@ class DemoTest(QObject):
 		test_result=demo_test_result,
 		ocr_measurement=ocr_measurement_text,
 		ocr_meas_ratio=ocr_ratio_text,
-		ocr_meas_timestamp=ocr_timestamp_text,)
+		ocr_meas_timestamp=ocr_timestamp_text,
+		meas_modbus_results=modbus_results,
+		reset_time=reset_time
+		)
 		time.sleep(0.5)
 
 	def config_setup_action(self,
@@ -98,6 +102,7 @@ class DemoTest(QObject):
 					   correct_answers=None, 
 						addr_meas=None,
 						addr_timestamp=None,
+						aggre_selection=None,
 						reset_time=None,
 						modbus_unit=None,
 					   search_pattern=None,
@@ -141,29 +146,165 @@ class DemoTest(QObject):
 
 		if (roi_keys and base_save_path and search_pattern):
 			self.test_mode_ocr_process(
-				base_save_path=base_save_path, 
+						base_save_path=base_save_path, 
 						search_pattern=search_pattern, 
 						test_step=test_step, 
 						roi_keys=roi_keys, 
 						correct_answers=correct_answers, 
 						addr_meas=addr_meas,
+						aggre_selection=aggre_selection,
 						addr_timestamp=None,
-						reset_time=None,
+						reset_time=reset_time,
 						modbus_unit=None,
 						)
 		else:
 			print(f"[DEBUG] Not calling setup_ocr_process for because some param is missing.")
 
 	def meter_test_mode_balance(self, base_save_path, search_pattern):
+		default_roi_keys = [ConfigROI.test_mode_balance_title, ConfigROI.test_mode_balance_phase, ConfigROI.test_mode_balance_ratio, ConfigROI.test_mode_balance_meas]
+
 		self.touch_manager.uitest_mode_start()
 		self.modbus_label.test_mode_balance_setting()
-
-		reset_time = self.modbus_label.reset_max_min()
 		
 		self.touch_manager.btn_front_meter()
 		self.touch_manager.btn_front_home()
+
+		### VOLTAGE-RMS-LL
+		self.config_setup_action(
+			main_menu=ConfigTouch.touch_main_menu_1.value,
+			side_menu=ConfigTouch.touch_side_menu_1.value,
+			data_view=ConfigTouch.touch_toggle_ll.value,
+			password=None,
+			popup_btn=None, 
+			number_input=None,
+			apply_btn=None,
+			test_step=21110,
+			roi_keys=default_roi_keys,
+			correct_answers=ConfigROI.m_vol_rms_ll_fixed_text.value,
+			addr_meas=[ConfigMap.addr_meas_vab.value, ConfigMap.addr_meas_vbc.value, ConfigMap.addr_meas_vca.value, ConfigMap.addr_meas_vavg_ll.value],
+			aggre_selection=1,
+			addr_timestamp=None,
+			reset_time=None,
+			modbus_unit=None,
+			search_pattern=search_pattern,
+			base_save_path=base_save_path,
+			key_type=None,
+			)
 		
-		### wiring -> Delta
+		### VOLTAGE-RMS-LL-Min
+		reset_time = self.modbus_label.reset_max_min()
+		self.config_setup_action(
+			main_menu=ConfigTouch.touch_main_menu_1.value,
+			side_menu=ConfigTouch.touch_side_menu_1.value,
+			data_view=ConfigTouch.touch_toggle_min.value,
+			password=None,
+			popup_btn=None, 
+			number_input=None,
+			apply_btn=None,
+			test_step=21111,
+			roi_keys=default_roi_keys,
+			correct_answers=ConfigROI.m_vol_rms_ll_fixed_text.value,
+			addr_meas=[ConfigMap.addr_meas_min_vab.value, ConfigMap.addr_meas_min_vbc.value, ConfigMap.addr_meas_min_vca.value, ConfigMap.addr_meas_min_vavg_ll.value],
+			aggre_selection=255,
+			addr_timestamp=None,
+			reset_time=reset_time,
+			modbus_unit=None,
+			search_pattern=search_pattern,
+			base_save_path=base_save_path,
+			key_type=None,
+			)
+		
+		### VOLTAGE-RMS-LL-Max
+		reset_time = self.modbus_label.reset_max_min()
+		self.config_setup_action(
+			main_menu=ConfigTouch.touch_main_menu_1.value,
+			side_menu=ConfigTouch.touch_side_menu_1.value,
+			data_view=ConfigTouch.touch_toggle_max.value,
+			password=None,
+			popup_btn=None, 
+			number_input=None,
+			apply_btn=None,
+			test_step=21111,
+			roi_keys=default_roi_keys,
+			correct_answers=ConfigROI.m_vol_rms_ll_fixed_text.value,
+			addr_meas=[ConfigMap.addr_meas_max_vab.value, ConfigMap.addr_meas_max_vbc.value, ConfigMap.addr_meas_max_vca.value, ConfigMap.addr_meas_max_vavg_ll.value],
+			aggre_selection=255,
+			addr_timestamp=None,
+			reset_time=reset_time,
+			modbus_unit=None,
+			search_pattern=search_pattern,
+			base_save_path=base_save_path,
+			key_type=None,
+			)
+		
+		### VOLTAGE-RMS-LN
+		self.config_setup_action(
+			main_menu=None,
+			side_menu=None,
+			data_view=ConfigTouch.touch_toggle_ln.value,
+			password=None,
+			popup_btn=None, 
+			number_input=None,
+			apply_btn=None,
+			test_step=2112,
+			roi_keys=default_roi_keys,
+			correct_answers=ConfigROI.m_vol_rms_ln_fixed_text.value,
+			addr_meas=[ConfigMap.addr_meas_van.value, ConfigMap.addr_meas_vbn.value, ConfigMap.addr_meas_vcn.value, ConfigMap.addr_meas_vavg_ln.value],
+			aggre_selection=1,
+			addr_timestamp=None,
+			reset_time=None,
+			modbus_unit=None,
+			search_pattern=search_pattern,
+			base_save_path=base_save_path,
+			key_type=None,
+			)
+		
+		### VOLTAGE-RMS-LN-Min
+		self.config_setup_action(
+			main_menu=None,
+			side_menu=None,
+			data_view=ConfigTouch.touch_toggle_min.value,
+			password=None,
+			popup_btn=None, 
+			number_input=None,
+			apply_btn=None,
+			test_step=2112,
+			roi_keys=default_roi_keys,
+			correct_answers=ConfigROI.m_vol_rms_ln_fixed_text.value,
+			addr_meas=[ConfigMap.addr_meas_min_van.value, ConfigMap.addr_meas_min_vbn.value, ConfigMap.addr_meas_min_vcn.value, ConfigMap.addr_meas_min_vavg_ln.value],
+			aggre_selection=255,
+			addr_timestamp=None,
+			reset_time=None,
+			modbus_unit=None,
+			search_pattern=search_pattern,
+			base_save_path=base_save_path,
+			key_type=None,
+			)
+		
+		### VOLTAGE-RMS-LN-Max
+		self.config_setup_action(
+			main_menu=None,
+			side_menu=None,
+			data_view=ConfigTouch.touch_toggle_max.value,
+			password=None,
+			popup_btn=None, 
+			number_input=None,
+			apply_btn=None,
+			test_step=2112,
+			roi_keys=default_roi_keys,
+			correct_answers=ConfigROI.m_vol_rms_ln_fixed_text.value,
+			addr_meas=[ConfigMap.addr_meas_max_van.value, ConfigMap.addr_meas_max_vbn.value, ConfigMap.addr_meas_max_vcn.value, ConfigMap.addr_meas_max_vavg_ln.value],
+			aggre_selection=255,
+			addr_timestamp=None,
+			reset_time=None,
+			modbus_unit=None,
+			search_pattern=search_pattern,
+			base_save_path=base_save_path,
+			key_type=None,
+			)
+
+		### CURRENT-RMS-MAX
+		reset_time = self.modbus_label.reset_max_min()
 		self.config_setup_action(
 			main_menu=ConfigTouch.touch_main_menu_2.value,
 			side_menu=ConfigTouch.touch_side_menu_1.value,
@@ -173,10 +314,11 @@ class DemoTest(QObject):
 			number_input=None,
 			apply_btn=None,
 			test_step=221,
-			roi_keys=[ConfigROI.m_curr_rms_title, ConfigROI.m_curr_rms_1, ConfigROI.m_curr_rms_2, ConfigROI.m_curr_rms_3],
+			roi_keys=default_roi_keys,
 			correct_answers=ConfigROI.m_curr_rms_fixed_text.value,
-			addr_meas=[ConfigMap.addr_meas_max_ia.value, ConfigMap.addr_meas_max_ib.value, ConfigMap.addr_meas_max_ic.value],
+			addr_meas=[ConfigMap.addr_meas_max_ia.value, ConfigMap.addr_meas_max_ib.value, ConfigMap.addr_meas_max_ic.value, ConfigMap.addr_meas_max_iavg.value],
 			addr_timestamp=None,
+		  	aggre_selection=255,
 			reset_time=reset_time,
 			modbus_unit=None,
 			search_pattern=search_pattern,

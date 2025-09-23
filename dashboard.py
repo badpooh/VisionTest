@@ -24,7 +24,7 @@ from config.config_setting import SettingList as sl
 
 from frame_test.webcam_function import WebCam
 
-image_directory = r"\\10.10.20.30\screenshot"
+image_directory = r"\\10.10.20.30\screenshot\10.10.26.159"
 
 class MyDashBoard(QMainWindow, Ui_MainWindow):
 
@@ -321,7 +321,7 @@ class TestWorker(QThread):
         self.setup_test_instance = setup_test_instance
         self.test_mode_instance = test_mode_instance
         self.connect_manager = connect_manager
-        self.search_pattern = os.path.join(image_directory, f'./**/*{self.dashboard.selected_ip}*.png')
+        self.search_pattern = os.path.join(image_directory, './**/*.png')
         self.test_mode = None
         self.current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         if current_folder_name.lower() == "visiontest":

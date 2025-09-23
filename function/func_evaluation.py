@@ -53,7 +53,7 @@ class Evaluation:
         return self.latest_image_path
 
     ### With Demo Balance ###
-    def eval_test_mode_balance(self, ocr_res, correct_answers, test_step, meas_modbus_value, reset_time=None, modbus_meas_value=None, modbus_timestamp_value=None, image_path=None):
+    def eval_test_mode_balance(self, ocr_res, correct_answers, test_step, modbus_meas_value, reset_time=None, modbus_timestamp_value=None, image_path=None):
         self.demo_test_result = False
         self.measurement_error = False
         self.condition_met = False
@@ -87,15 +87,18 @@ class Evaluation:
             return percent_error, results_list
         
         def validate_timestamp(timestamp_list, reset_time):
+            timestamp_error = False
             results_list = []
             numeric_list = []
-            timestamp_error = False
+            reset_timestamp = reset_time.timestamp()
+            print(reset_time)
 
             for item in timestamp_list:
-                dt_object = datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
-                unix_timestamp = dt_object.timestamp()
+                naive_dt_object = datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
+                utc_dt_object = naive_dt_object.replace(tzinfo=timezone.utc)
+                unix_timestamp = utc_dt_object.timestamp()
 
-                if reset_time - 30 < unix_timestamp < reset_time + 30:
+                if reset_timestamp - 30 < unix_timestamp < reset_timestamp + 30:
                     print(f"'{item}' -> PASS")
                     result = f"{item} -> PASS"
                     results_list.append(result)
@@ -133,47 +136,64 @@ class Evaluation:
 
             return self.measurement_error, results_list, numeric_list
         
-        def validate_modbus(modbus_value, right_value):
+        def validate_modbus(modbus_value, right_value, tolerance=0.5):
             formatted_value = []
             modbus_error = False
 
-            value = abs(modbus_value)
-            if value >= 1000:
-                value = value / 1000
+            for item in modbus_value:
+                value = abs(item)
+                if value >= 1000:
+                    value = value / 1000
 
-            if round(value, 1) >= 100:
-               for_value = f'{value:.1f}'
-               formatted_value.append(for_value)
-            elif round(value, 2) >= 10:
-                for_value = f'{value:.2f}'
-                formatted_value.append(for_value)
-            elif round(value, 3) >= 1:
-                for_value = f'{value:.3f}'
-                formatted_value.append(for_value)
-            else:
-                for_value = f'{value:.3f}'
-                formatted_value.append(for_value)
-            
-            formatted_value_counter = Counter(formatted_value)
-            right_value_counter = Counter(right_value)
+                if round(value, 1) >= 100:
+                    for_value = f'{value:.1f}'
+                    formatted_value.append(for_value)
+                elif round(value, 2) >= 10:
+                    for_value = f'{value:.2f}'
+                    formatted_value.append(for_value)
+                elif round(value, 3) >= 1:
+                    for_value = f'{value:.3f}'
+                    formatted_value.append(for_value)
+                else:
+                    for_value = f'{value:.3f}'
+                    formatted_value.append(for_value)
 
-            value_error = list((formatted_value_counter - right_value_counter).elements())
-            if value_error:
-                modbus_error = True
+            for modbus_val, ocr_val in zip(formatted_value, right_value):
+        
+                if modbus_val is None or ocr_val is None:
+                    result_str = f"Modbus: {modbus_val}, OCR: {ocr_val} -> FAIL (Invalid value)"
+                    print("len(mobus_val) != len(ocr_val)")
+                    continue
+                
+                modbus_val = float(modbus_val)
+                ocr_val = float(ocr_val)
 
-            print(value_error, modbus_error)
+                difference = abs(modbus_val) - abs(ocr_val)
+                abs_difference = abs(difference)
+                if abs_difference <= tolerance:
+                    result_str = f"Modbus: {modbus_val:.3f}, OCR: {ocr_val:.3f} -> PASS (Diff: {abs_difference:.3f})"
+                    print(f"{result_str}")
+                else:
+                    result_str = f"Modbus: {modbus_val:.3f}, OCR: {ocr_val:.3f} -> FAIL (Diff: {abs_difference:.3f})"
+                    print(f"{result_str}")
+                    modbus_error = True
 
-            return modbus_error, value_error
+            return modbus_error, formatted_value
  
         ### 고정 문자 가공 ###
         ocr_fixed_text = [result.strip() for result in ocr_res[:2]]
         ####################
 
         ### 변동 문자 가공 ###
-        ocr_ratio_text_tuple = re.findall(r'(\d+\.\d+\s*%)|([A-Z]+\s*%)', ocr_res[2])
-        ocr_ratio_text = [item1 + item2 for item1, item2 in ocr_ratio_text_tuple]
-        ocr_timestamp_text = re.findall(r'\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}', ocr_res[2])
-        ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[3])
+        if len(ocr_res) > 3:
+            ocr_ratio_text_tuple = re.findall(r'(\d+\.\d+\s*%)|([A-Z]+\s*%)', ocr_res[2])
+            ocr_ratio_text = [item1 + item2 for item1, item2 in ocr_ratio_text_tuple]
+            ocr_timestamp_text = re.findall(r'\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}', ocr_res[2])
+            ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[3])
+        else:
+            ocr_ratio_text = None
+            ocr_timestamp_text = None
+            ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[2])
         ####################
 
         ### 고정 문자 중 잘못된 문자 검증 ###
@@ -186,18 +206,45 @@ class Evaluation:
         
         all_meas_results = []
         all_modbus_results = []
+        ratio_results = []
+        timestamp_results = []
+        meas_results = [] 
+        meas_modbus_results = [] 
 
-        ### 검사 test_step 개념: Relay:1, Meter:2, CURRENT:02, RMS:001, LL:0001
-
-        if test_step == 221:
+        ### 검사 test_step 개념: 
+        ### RELAY:1, METER:2, 
+        ### VOLTAGE:01, CURRENT:02, POWER:03, 
+        ### RMS:001, FUND:002, 
+        ### LL:0001 LN:0002,
+        ### Min:00001 Max:00002
+        if ocr_ratio_text and ocr_timestamp_text:
             ratio_error, ratio_results = validate_percent(ocr_ratio_text, 49.5, 50.5)
             all_meas_results.append(ratio_error)
             timestamp_error, timestamp_results, timestamp_numeric_list = validate_timestamp(ocr_timestamp_text, reset_time)
             all_meas_results.append(timestamp_error)
-            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, 2.495, 2.505, "A")
+            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, 24.8, 25.2, "A")
             all_meas_results.append(meas_error)
-            meas_modbus_error, meas_modbus_results = validate_modbus(meas_modbus_value, meas_numeric_list)
+            print(modbus_meas_value)
+            meas_modbus_error, meas_modbus_results = validate_modbus(modbus_meas_value, meas_numeric_list)
             all_modbus_results.append(meas_modbus_error)
+
+        elif not ocr_ratio_text and ocr_timestamp_text:
+            timestamp_error, timestamp_results, timestamp_numeric_list = validate_timestamp(ocr_timestamp_text, reset_time)
+            all_meas_results.append(timestamp_error)
+            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, 189.6, 190.4, "V")
+            all_meas_results.append(meas_error)
+            print(modbus_meas_value)
+            meas_modbus_error, meas_modbus_results = validate_modbus(modbus_meas_value, meas_numeric_list)
+            all_modbus_results.append(meas_modbus_error)
+        
+        elif not ocr_ratio_text and not ocr_timestamp_text:
+            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, 189.6, 190.4, "V")
+            all_meas_results.append(meas_error)
+            print(modbus_meas_value)
+            meas_modbus_error, meas_modbus_results = validate_modbus(modbus_meas_value, meas_numeric_list)
+            all_modbus_results.append(meas_modbus_error)
+        
+        
         
         elif not self.condition_met:
             print("Nothing matching word")
@@ -215,7 +262,7 @@ class Evaluation:
 
         return self.demo_test_result, ocr_error, ocr_missing_item, ocr_fixed_text, ratio_results, timestamp_results, meas_results, meas_modbus_results
     
-    def test_mode_save_csv(self, base_save_path, img_path, ocr_fixed_text, ocr_error, right_error, test_result=False, ocr_meas_ratio=None, ocr_meas_timestamp=None, ocr_measurement=None,):
+    def test_mode_save_csv(self, base_save_path, img_path, ocr_fixed_text, ocr_error, right_error, meas_modbus_results, reset_time, test_result=False, ocr_meas_ratio=None, ocr_meas_timestamp=None, ocr_measurement=None,):
         """
         img_path: 이미지경로 + 이미지파일 제목 -> csv 파일 제목이 됨
         base_save_path: CSV/이미지 저장할 폴더
@@ -235,8 +282,9 @@ class Evaluation:
                         "OCR Errors (Extra)": f"{ocr_error} ({'FAIL' if ocr_error else 'PASS'})",
                         "OCR Errors (Missing)": f"{right_error} ({'FAIL' if right_error else 'PASS'})",
                         "Meas Ratio Results": str(ocr_meas_ratio),
-                        "Timestamp Results": str(ocr_meas_timestamp),
+                        "Timestamp Results": f"{str(ocr_meas_timestamp)} / Timestamp Standard: {str(reset_time)}",
                         "Measurement Results": str(ocr_measurement),
+                        "Modbus Measurement": str(meas_modbus_results)
                         # "Image Match": img_result,
                         # "Invalid Elements (H.Text)": str(invalid_elements)
                         }

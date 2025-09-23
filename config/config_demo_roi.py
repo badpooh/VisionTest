@@ -1,11 +1,20 @@
 from enum import Enum
 
 class ConfigROI(Enum):
+    m_vol_rms_ll_fixed_text = ['RMS Voltage L-L L-N Min Max', 'AB BC CA Average']
+    m_vol_rms_ln_fixed_text = ['RMS Voltage L-L L-N Min Max', 'A B C Average']
+    m_vol_fund_ll_fixed_text = ['Fund. Volt. L-L L-N Min Max', 'AB BC CA Average']
+    m_vol_fund_ln_fixed_text = ['Fund. Volt. L-L L-N Min Max', 'A B C Average']
+    m_vol_thd_ll_fixed_text = ['Total Harmonic Distortion L-L L-N Max', 'AB BC CA Average']
+    m_vol_thd_ln_fixed_text = ['Total Harmonic Distortion L-L L-N Max', 'A B C Average']
+    m_vol_freq_fixed_text = ['Frequency Min Max', 'Frequency']
+    m_vol_residual_fixed_text = ['Residual Voltage Min Max', 'RMS Fund.']
     m_curr_rms_fixed_text = ['RMS Current Min Max', 'A B C Average']
-    m_curr_rms_title = ['title']
-    m_curr_rms_1 = ['a,b,c']
-    m_curr_rms_2 = ['50.0 %'] # +timestamp
-    m_curr_rms_3 = ['25.00 A']
+
+    test_mode_balance_title = ['title']
+    test_mode_balance_phase = ['a,b,c']
+    test_mode_balance_ratio = ['50.0 %'] # +timestamp
+    test_mode_balance_meas = ['25.00 A']
     
     s_min_meas_sec_ln_vol_1 = ['Min. Meas. Secondary L-N Volt. [V]']
     s_min_meas_sec_ln_vol_2 = ('Min. Meas. Secondary L-N Volt. [V]', ['0', '10'])
@@ -325,10 +334,10 @@ class Configs():
         
         params = {
 
-            ConfigROI.m_curr_rms_title: scale_coord(self.view1_zone_1),
-            ConfigROI.m_curr_rms_1: scale_coord(self.view1_zone_2),
-            ConfigROI.m_curr_rms_2: scale_coord(self.view1_zone_3),
-            ConfigROI.m_curr_rms_3: scale_coord(self.view1_zone_4),
+            ConfigROI.test_mode_balance_title: scale_coord(self.view1_zone_1),
+            ConfigROI.test_mode_balance_phase: scale_coord(self.view1_zone_2),
+            ConfigROI.test_mode_balance_ratio: scale_coord(self.view1_zone_3),
+            ConfigROI.test_mode_balance_meas: scale_coord(self.view1_zone_4),
             
             ConfigROI.s_vt_primary_ll_vol_1: scale_coord(self.view3_zone_1),
             ConfigROI.s_vt_primary_ll_vol_2: scale_coord(self.view3_zone_2),
