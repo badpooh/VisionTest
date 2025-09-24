@@ -53,7 +53,7 @@ class Evaluation:
         return self.latest_image_path
 
     ### With Demo Balance ###
-    def eval_test_mode_balance(self, ocr_res, correct_answers, modbus_meas_value, meas_lower, meas_upper, meas_unit, ratio_lower=None, ratio_upper=None, reset_time=None, modbus_timestamp_value=None, image_path=None):
+    def eval_test_mode_balance(self, ocr_res, correct_answers, modbus_meas_value, meas_rules, ratio_lower=None, ratio_upper=None, reset_time=None, modbus_timestamp_value=None, image_path=None):
         self.demo_test_result = False
         self.measurement_error = False
         self.condition_met = False
@@ -112,28 +112,35 @@ class Evaluation:
             
             return timestamp_error, results_list, numeric_list
         
-        def validate_measurement(measurement_list, lower_limit, upper_limit, right_unit):
+        def validate_measurement(measurement_list, rules_list):
             results_list = []
             numeric_list = []
 
-            for item in measurement_list:
-                match = re.match(r"([-+]?\d+\.?\d*)\s*(.*)", item) #[-+]?<기호>  \d+<숫자>  \.?<소수점>  \d*<숫자>)  \s*<공백>  (.*<나머지그룹>
+            if len(measurement_list) != len(rules_list):
+                print(f"FAIL - Mismatch between number of measurements and rules.")
+                return True, ["Length mismatch"], []
+
+            for item, rules in zip(measurement_list, rules_list):
+                match = re.match(r"([-+]?\d+\.?\d*)\s*(.*)", item)
                 if match and match.group(1):
                     numeric_value = float(match.group(1))
                     unit = match.group(2).strip()
 
+                    # 해당 항목에 맞는 개별 규칙을 가져옵니다.
+                    lower_limit = rules['low']
+                    upper_limit = rules['high']
+                    right_unit = rules['unit']
+
                     if lower_limit < numeric_value < upper_limit and unit == right_unit:
-                        print(f"'{item}' -> PASS")
-                        result = f"{item} -> PASS"
+                        result = f"'{item}' -> PASS"
                         results_list.append(result)
                         numeric_list.append(numeric_value)
                     else:
-                        print(f"'{item}' -> (FAIL / 단위 또는 범위 오류)")
-                        self.measurement_error = True
-                        result = f"{item} -> FAIL"
+                        result = f"'{item}' -> (FAIL)"
                         results_list.append(result)
+                        self.measurement_error = True
                         numeric_list.append(numeric_value)
-
+            
             return self.measurement_error, results_list, numeric_list
         
         def validate_modbus(modbus_value, right_value, tolerance=0.5):
@@ -191,10 +198,20 @@ class Evaluation:
             ocr_timestamp_text = re.findall(r'\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}', ocr_res[2])
             ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[3])
         else:
-            ocr_ratio_text = None
-            ocr_timestamp_text = None
+            ocr_ratio_text = []
+            ocr_timestamp_text = []
             ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[2])
         ####################
+
+        # if len(ocr_res) > 3:
+        #     ratio_matches = re.findall(r'(\d+\.\d+\s*%)|([A-Z]+\s*%)', ocr_res[2] or "")
+        #     ocr_ratio_text = [ (a or "") + (b or "") for a, b in ratio_matches ]  # 빈 결과면 []
+        #     ocr_timestamp_text = re.findall(r'\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}', ocr_res[2] or "")
+        #     ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[3] or "")
+        # else:
+        #     ocr_ratio_text = []
+        #     ocr_timestamp_text = []
+        #     ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', (ocr_res[2] if len(ocr_res) > 2 else "") or "")
 
         ### 고정 문자 중 잘못된 문자 검증 ###
         ocr_fixed_text_counter = Counter(ocr_fixed_text)
@@ -222,7 +239,7 @@ class Evaluation:
             all_meas_results.append(ratio_error)
             timestamp_error, timestamp_results, timestamp_numeric_list = validate_timestamp(ocr_timestamp_text, reset_time)
             all_meas_results.append(timestamp_error)
-            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, meas_lower, meas_upper, meas_unit)
+            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, meas_rules)
             all_meas_results.append(meas_error)
             print(modbus_meas_value)
             meas_modbus_error, meas_modbus_results = validate_modbus(modbus_meas_value, meas_numeric_list)
@@ -231,14 +248,14 @@ class Evaluation:
         elif not ocr_ratio_text and ocr_timestamp_text:
             timestamp_error, timestamp_results, timestamp_numeric_list = validate_timestamp(ocr_timestamp_text, reset_time)
             all_meas_results.append(timestamp_error)
-            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, meas_lower, meas_upper, meas_unit)
+            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, meas_rules)
             all_meas_results.append(meas_error)
             print(modbus_meas_value)
             meas_modbus_error, meas_modbus_results = validate_modbus(modbus_meas_value, meas_numeric_list)
             all_modbus_results.append(meas_modbus_error)
         
         elif not ocr_ratio_text and not ocr_timestamp_text:
-            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, meas_lower, meas_upper, meas_unit)
+            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, meas_rules)
             all_meas_results.append(meas_error)
             print(modbus_meas_value)
             meas_modbus_error, meas_modbus_results = validate_modbus(modbus_meas_value, meas_numeric_list)

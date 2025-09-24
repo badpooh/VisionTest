@@ -52,15 +52,29 @@ class TouchManager:
             self.touch_write(ConfigTouch.touch_addr_touch_mode.value, 1)
             self.touch_write(ConfigTouch.touch_addr_touch_mode.value, 0)
 
-    def touch_menu(self, menu_key):
+    def touch_menu(self, menu_input):
+        coords_to_touch = []
+        
+        if menu_input:
+            if isinstance(menu_input[0], (list, tuple)):
+                coords_to_touch = menu_input
+            else:
+                coords_to_touch = [menu_input]
+
         if self.connect_manager.touch_client:
-            data_view_x, data_view_y = menu_key
-            self.touch_write(ConfigTouch.touch_addr_pos_x.value, data_view_x)
-            self.touch_write(ConfigTouch.touch_addr_pos_y.value, data_view_y)
-            self.touch_write(ConfigTouch.touch_addr_touch_mode.value, 1)
-            self.touch_write(ConfigTouch.touch_addr_touch_mode.value, 0)
+            for coords in coords_to_touch:
+                if not isinstance(coords, (list, tuple)) or len(coords) != 2:
+                    print(f"Skipping invalid coordinate format: {coords}")
+                    continue
+                x, y = coords
+                self.touch_write(ConfigTouch.touch_addr_pos_x.value, x)
+                self.touch_write(ConfigTouch.touch_addr_pos_y.value, y)
+                self.touch_write(ConfigTouch.touch_addr_touch_mode.value, 1) # 누름
+                time.sleep(0.2) # 안정성을 위한 딜레이
+                self.touch_write(ConfigTouch.touch_addr_touch_mode.value, 0) # 뗌
+                time.sleep(0.5) # 다음 터치와의 간격
         else:
-            print("Menu Touch Error")
+            print("Menu Touch Error: Not connected")
 
     def btn_popup_touch(self, btn_popup_key):
         if self.connect_manager.touch_client:
