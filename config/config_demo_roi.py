@@ -8,13 +8,23 @@ class ConfigROI(Enum):
     m_vol_thd_ll_fixed_text = ['Total Harmonic Distortion L-L L-N Max', 'AB BC CA']
     m_vol_thd_ln_fixed_text = ['Total Harmonic Distortion L-L L-N Max', 'A B C']
     m_vol_freq_fixed_text = ['Frequency Min Max', 'Frequency']
-    m_vol_residual_fixed_text = ['Residual Voltage Min Max', 'RMS Fund.']
+    m_vol_residual_fixed_text = ['Residual Voltage', 'Min Max', 'RMS Fund.']
     m_curr_rms_fixed_text = ['RMS Current Min Max', 'A B C Average']
+    m_curr_fund_fixed_text = ['Fundamental Current Min Max', 'A B C Average']
+    m_curr_demand_fixed_text = ['Demand Current Peak', 'A B C Average']
+    m_curr_thd_fixed_text = ['Total Harmonic Distortion Max', 'A B C']
+    m_curr_tdd_fixed_text = ['Total Demand Distortion Max', 'A B C']
+    m_curr_cf_fixed_text = ['Crest Factor Max', 'A B C']
+    m_curr_kf_fixed_text = ['K-Factor Max', 'A B C']
+    m_curr_residual_fixed_text = ['Residual Current ', 'Min Max', 'RMS Fund.']
+
 
     test_mode_balance_title = ['title']
     test_mode_balance_phase = ['a,b,c']
     test_mode_balance_ratio = ['50.0 %'] # +timestamp
     test_mode_balance_meas = ['25.00 A']
+    tmb_title_residual_1 = ['residual']
+    tmb_title_residual_2 = ['min max']
     
     s_min_meas_sec_ln_vol_1 = ['Min. Meas. Secondary L-N Volt. [V]']
     s_min_meas_sec_ln_vol_2 = ('Min. Meas. Secondary L-N Volt. [V]', ['0', '10'])
@@ -287,10 +297,12 @@ class Configs():
         self.view1_zone_2 = (165, 180, 155, 290)
         self.view1_zone_3 = (320, 180, 185, 290)
         self.view1_zone_4 = (505, 180, 270, 290)
-        
 
-        self.view2_zone_1 = (476, 182, 305, 34)
-        self.view2_zone_2 = (476, 217, 298, 34)
+        self.view1_zone_1_1 = (170, 140, 190, 25)
+        self.view1_zone_1_2 = (565, 125, 215, 48)
+        
+        self.view2_zone_1 = (320, 180, 185, 290)
+        self.view2_zone_2 = (505, 180, 270, 290)
         self.view3_zone_1 = (175, 254, 305, 34)
         self.view3_zone_2 = (175, 289, 298, 34)
         self.view4_zone_1 = (476, 254, 298, 34)
@@ -338,6 +350,10 @@ class Configs():
             ConfigROI.test_mode_balance_phase: scale_coord(self.view1_zone_2),
             ConfigROI.test_mode_balance_ratio: scale_coord(self.view1_zone_3),
             ConfigROI.test_mode_balance_meas: scale_coord(self.view1_zone_4),
+
+            ConfigROI.tmb_title_residual_1: scale_coord(self.view1_zone_1_1),
+            ConfigROI.tmb_title_residual_2: scale_coord(self.view1_zone_1_2),
+
             
             ConfigROI.s_vt_primary_ll_vol_1: scale_coord(self.view3_zone_1),
             ConfigROI.s_vt_primary_ll_vol_2: scale_coord(self.view3_zone_2),

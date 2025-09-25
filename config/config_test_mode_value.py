@@ -1,32 +1,89 @@
 from enum import Enum
 
 class TestModeBalance(Enum):
-
-	vol_rms_ll = (189.0, 191.0, "V")
-	vol_rms_ln = (109.0, 111.0, "V")
-	vol_fund_ll = (189.0, 191.0, "V")
-	vol_fund_ln = (109.0, 111.0, "V")
-	vol_thd_ll = (2.0, 3.0, "%")
-	vol_thd_ln = (3.0, 4.0, "%")
-	vol_freq = (59.800, 60.100, "Hz")
+	### Voltage
+	vol_rms_ll = [
+				{'low': 189.0, 'high': 191.0, 'unit': "V"},
+				{'low': 189.0, 'high': 191.0, 'unit': "V"},
+				{'low': 189.0, 'high': 191.0, 'unit': "V"},
+				{'low': 189.0, 'high': 191.0, 'unit': "V"}]
+	vol_rms_ln = [
+				{'low': 109.0, 'high': 111.0, 'unit': "V"},
+				{'low': 109.0, 'high': 111.0, 'unit': "V"},
+				{'low': 109.0, 'high': 111.0, 'unit': "V"},
+				{'low': 109.0, 'high': 111.0, 'unit': "V"}]
+	vol_fund_ll = [
+				{'low': 189.0, 'high': 191.0, 'unit': "V"},
+				{'low': 189.0, 'high': 191.0, 'unit': "V"},
+				{'low': 189.0, 'high': 191.0, 'unit': "V"},
+				{'low': 189.0, 'high': 191.0, 'unit': "V"}]
+	vol_fund_ln = [
+				{'low': 109.0, 'high': 111.0, 'unit': "V"},
+				{'low': 109.0, 'high': 111.0, 'unit': "V"},
+				{'low': 109.0, 'high': 111.0, 'unit': "V"},
+				{'low': 109.0, 'high': 111.0, 'unit': "V"}]
+	vol_thd_ll = [
+				{'low': 2.0, 'high': 3.0, 'unit': "%"},
+				{'low': 2.0, 'high': 3.0, 'unit': "%"},
+				{'low': 2.0, 'high': 3.0, 'unit': "%"}]
+	vol_thd_ln = [
+				{'low': 3.0, 'high': 4.0, 'unit': "%"},
+				{'low': 3.0, 'high': 4.0, 'unit': "%"},
+				{'low': 3.0, 'high': 4.0, 'unit': "%"}]
+	vol_freq = [{'low': 59.800, 'high': 60.100, 'unit': "Hz"}]
 	vol_residual = [
 					{'low': 6.000, 'high': 7.000, 'unit': 'V'},
-					{'low': 0.700, 'high': 2.000, 'unit': 'V'},
-					]
-	vol_rms_residual = (6.000, 7.000, "V")
-	vol_fund_residual = (0.700, 2.000, "V")
-	curr_rms = (24.00, 26.00, "A")
-	curr_rms_ratio = (49.0, 51.0, "%")
-	curr_fund = (24.00, 26.00, "A")
-	curr_fund_ratio = (49.0, 51.0, "%")
-	curr_demand = (24.00, 26.00, "A")
-	curr_demand_ratio = (49.0, 51.0, "%")
-	curr_thd = (1.5, 2.5, "%")
-	curr_tdd = (1.5, 2.5, "%")
-	curr_cf = (1.400, 1.500, "")
-	curr_kf = (1.200, 1.500, "")
-	curr_rms_residaul = (0.500, 1.000, "A")
-	curr_fund_residual = (0.100, 0.500, "A")
+					{'low': 0.700, 'high': 2.000, 'unit': 'V'},]
+	### Current
+	curr_rms = [
+				{'low': 24.00, 'high': 26.00, 'unit': "A"},
+				{'low': 24.00, 'high': 26.00, 'unit': "A"},
+				{'low': 24.00, 'high': 26.00, 'unit': "A"},
+				{'low': 24.00, 'high': 26.00, 'unit': "A"}]
+	curr_rms_ratio = [
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"}]
+	curr_fund = [
+				{'low': 24.00, 'high': 26.00, 'unit': "A"},
+				{'low': 24.00, 'high': 26.00, 'unit': "A"},
+				{'low': 24.00, 'high': 26.00, 'unit': "A"},
+				{'low': 24.00, 'high': 26.00, 'unit': "A"}]
+	curr_fund_ratio = [
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"}]
+	curr_demand = [
+				{'low': 24.00, 'high': 26.00, 'unit': "A"},
+				{'low': 24.00, 'high': 26.00, 'unit': "A"},
+				{'low': 24.00, 'high': 26.00, 'unit': "A"},
+				{'low': 24.00, 'high': 26.00, 'unit': "A"}]
+	curr_demand_ratio = [
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"}]
+	curr_thd = [
+				{'low': 1.5, 'high': 2.5, 'unit': "%"},
+				{'low': 1.5, 'high': 2.5, 'unit': "%"},
+				{'low': 1.5, 'high': 2.5, 'unit': "%"}]
+	curr_tdd = [
+				{'low': 1.5, 'high': 2.5, 'unit': "%"},
+				{'low': 1.5, 'high': 2.5, 'unit': "%"},
+				{'low': 1.5, 'high': 2.5, 'unit': "%"}]
+	curr_cf = [
+				{'low': 1.400, 'high': 1.500, 'unit': "%"},
+				{'low': 1.400, 'high': 1.500, 'unit': "%"},
+				{'low': 1.400, 'high': 1.500, 'unit': "%"}]
+	curr_kf = [
+				{'low': 1.200, 'high': 1.500, 'unit': "%"},
+				{'low': 1.200, 'high': 1.500, 'unit': "%"},
+				{'low': 1.200, 'high': 1.500, 'unit': "%"}]
+	curr_residual = [
+					{'low': 0.500, 'high': 1.000, 'unit': 'A'},
+					{'low': 0.100, 'high': 0.500, 'unit': 'A'},]
 
 
 	

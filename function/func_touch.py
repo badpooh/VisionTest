@@ -72,7 +72,7 @@ class TouchManager:
                 self.touch_write(ConfigTouch.touch_addr_touch_mode.value, 1) # 누름
                 time.sleep(0.2) # 안정성을 위한 딜레이
                 self.touch_write(ConfigTouch.touch_addr_touch_mode.value, 0) # 뗌
-                time.sleep(0.5) # 다음 터치와의 간격
+                time.sleep(0.6) # 다음 터치와의 간격
         else:
             print("Menu Touch Error: Not connected")
 

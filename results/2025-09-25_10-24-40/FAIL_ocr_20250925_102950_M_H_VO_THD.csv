@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Total Harmonic Distortion L-L L-N Max', 'AB BC CA']"
+OCR Errors (Extra),['AB BC CA'] (FAIL)
+OCR Errors (Missing),['A B C'] (FAIL)
+Meas Ratio Results,[]
+Timestamp Results,"['2025-09-25 10:29:45 -> PASS', '2025-09-25 10:29:46 -> PASS', '2025-09-25 10:29:49 -> PASS'] / Timestamp Standard: 2025-09-25 10:29:41+00:00"
+Measurement Results,"[""'2.9 %' -> (FAIL)"", ""'2.9 %' -> (FAIL)"", ""'2.8 %' -> (FAIL)""]"
+Modbus Measurement,"['3.473', '3.423', '3.413']"

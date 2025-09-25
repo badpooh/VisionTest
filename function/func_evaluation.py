@@ -16,6 +16,7 @@ import time
 
 from function.func_ocr import PaddleOCRManager
 from function.func_connection import ConnectionManager
+from function.func_modbus import ModbusLabels
 
 from config.config_roi import Configs
 from config.config_color import ConfigColor as cc
@@ -30,48 +31,93 @@ class Evaluation:
     config_data = Configs()
     rois = config_data.roi_params()
     connect_manager = ConnectionManager()
+    modbus_labels = ModbusLabels()
 
     def __init__(self):
         pass
 
+    # def load_image_file(self, search_pattern):
+    #     self.now = self.modbus_labels.system_time_read()
+    #     # self.now = datetime.now()
+    #     self.file_time_diff = {}
+
+    #     for file_path in glob.glob(search_pattern, recursive=True):
+    #         creation_time = datetime.fromtimestamp(os.path.getctime(file_path))
+    #         time_diff = abs((self.now - creation_time).total_seconds())
+    #         self.file_time_diff[file_path] = time_diff
+
+    #     closest_file = min(self.file_time_diff,
+    #                         key=self.file_time_diff.get, default=None)
+    #     normalized_path = os.path.normpath(closest_file)
+    #     self.latest_image_path = normalized_path
+
+    #     print("가장 가까운 시간에 생성된 파일:", normalized_path)
+
+    #     return self.latest_image_path
+
     def load_image_file(self, search_pattern):
-        self.now = datetime.now()
-        self.file_time_diff = {}
+        # 1. 기준이 될 장치의 현재 시간을 먼저 읽어옵니다.
+        start_time = self.modbus_labels.system_time_read()
+        if not start_time:
+            print("Error: 기준 시간을 장치에서 읽어오지 못했습니다.")
+            return None
 
-        for file_path in glob.glob(search_pattern, recursive=True):
+        print(f"기준 시간: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # 2. 기준 시간 이후에 생성된 파일들만 후보로 추립니다.
+        candidate_files = []
+        all_files = glob.glob(search_pattern, recursive=True)
+
+        for file_path in all_files:
+            # 파일의 생성 시간을 datetime 객체로 변환합니다.
             creation_time = datetime.fromtimestamp(os.path.getctime(file_path))
-            time_diff = abs((self.now - creation_time).total_seconds())
-            self.file_time_diff[file_path] = time_diff
+            
+            # 파일 생성 시간이 기준 시간보다 이후인지 확인합니다.
+            if creation_time > start_time:
+                candidate_files.append(file_path)
 
-        closest_file = min(self.file_time_diff,
-                            key=self.file_time_diff.get, default=None)
-        normalized_path = os.path.normpath(closest_file)
-        self.latest_image_path = normalized_path
+        # 3. 후보 파일이 있는지 확인합니다.
+        if not candidate_files:
+            print("경고: 기준 시간 이후에 생성된 새 파일을 찾지 못했습니다.")
+            return None
 
-        print("가장 가까운 시간에 생성된 파일:", normalized_path)
+        # 4. 후보 파일들 중에서 생성 시간이 가장 빠른(기준 시간과 가장 가까운) 파일을 선택합니다.
+        #    min() 함수와 os.path.getctime을 key로 사용하여 가장 오래된 파일(즉, 기준 시간에 가장 가까운 파일)을 찾습니다.
+        latest_image_path = min(candidate_files, key=os.path.getctime)
+        
+        normalized_path = os.path.normpath(latest_image_path)
+        print("찾은 파일:", normalized_path)
 
-        return self.latest_image_path
+        return normalized_path
 
     ### With Demo Balance ###
-    def eval_test_mode_balance(self, ocr_res, correct_answers, modbus_meas_value, meas_rules, ratio_lower=None, ratio_upper=None, reset_time=None, modbus_timestamp_value=None, image_path=None):
+    def eval_test_mode_balance(self, ocr_res, correct_answers, modbus_meas_value, meas_rules, ratio_rules, reset_time=None, modbus_timestamp_value=None, image_path=None):
         self.demo_test_result = False
         self.measurement_error = False
         self.condition_met = False
         
         image = cv2.imread(image_path)
 
-        def validate_ratio(percent_list, lower_limit, upper_limit):
+        def validate_ratio(percent_list, rules_list):
             results_list = []
             percent_error = False
 
-            for item in percent_list:
+            if len(percent_list) != len(rules_list):
+                print(f"FAIL - Mismatch between number of ratio and rules.")
+                return True, ["Length mismatch"], []
+
+            for item, rules in zip(percent_list, rules_list):
                 match = re.match(r"([-+]?\d+\.?\d*)\s*(.*)", item)
 
                 if match and match.group(1):
                     numeric_value = float(match.group(1))
                     unit = match.group(2).strip()
 
-                    if unit == '%' and lower_limit < numeric_value < upper_limit:
+                    lower_limit = rules['low']
+                    upper_limit = rules['high']
+                    right_unit = rules['unit']
+
+                    if lower_limit < numeric_value < upper_limit and unit == right_unit:
                         print(f"'{item}' -> PASS")
                         result = f"{item} -> PASS"
                         results_list.append(result)
@@ -118,6 +164,7 @@ class Evaluation:
 
             if len(measurement_list) != len(rules_list):
                 print(f"FAIL - Mismatch between number of measurements and rules.")
+                print(measurement_list, rules_list)
                 return True, ["Length mismatch"], []
 
             for item, rules in zip(measurement_list, rules_list):
@@ -186,32 +233,36 @@ class Evaluation:
                     modbus_error = True
 
             return modbus_error, formatted_value
- 
-        ### 고정 문자 가공 ###
-        ocr_fixed_text = [result.strip() for result in ocr_res[:2]]
-        ####################
+        
+        ### 고정, 변동 문자 가공 예외
+        if ocr_res[0] == 'Residual Voltage':
+            ocr_fixed_text = [result.strip() for result in ocr_res[:3]]
 
-        ### 변동 문자 가공 ###
-        if len(ocr_res) > 3:
-            ocr_ratio_text_tuple = re.findall(r'(\d+\.\d+\s*%)|([A-Z]+\s*%)', ocr_res[2])
-            ocr_ratio_text = [item1 + item2 for item1, item2 in ocr_ratio_text_tuple]
-            ocr_timestamp_text = re.findall(r'\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}', ocr_res[2])
-            ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[3])
+            if len(ocr_res) > 4:
+                ocr_ratio_text_tuple = re.findall(r'(\d+\.\d+\s*%)|([A-Z]+\s*%)', ocr_res[3])
+                ocr_ratio_text = [item1 + item2 for item1, item2 in ocr_ratio_text_tuple]
+                ocr_timestamp_text = re.findall(r'\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}', ocr_res[3])
+                ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[4])
+            else:
+                ocr_ratio_text = []
+                ocr_timestamp_text = []
+                ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[3])
         else:
-            ocr_ratio_text = []
-            ocr_timestamp_text = []
-            ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[2])
-        ####################
+            ### 고정 문자 가공 ###
+            ocr_fixed_text = [result.strip() for result in ocr_res[:2]]
+            ####################
 
-        # if len(ocr_res) > 3:
-        #     ratio_matches = re.findall(r'(\d+\.\d+\s*%)|([A-Z]+\s*%)', ocr_res[2] or "")
-        #     ocr_ratio_text = [ (a or "") + (b or "") for a, b in ratio_matches ]  # 빈 결과면 []
-        #     ocr_timestamp_text = re.findall(r'\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}', ocr_res[2] or "")
-        #     ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[3] or "")
-        # else:
-        #     ocr_ratio_text = []
-        #     ocr_timestamp_text = []
-        #     ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', (ocr_res[2] if len(ocr_res) > 2 else "") or "")
+            ### 변동 문자 가공 ###
+            if len(ocr_res) > 3:
+                ocr_ratio_text_tuple = re.findall(r'(\d+\.\d+\s*%)|([A-Z]+\s*%)', ocr_res[2])
+                ocr_ratio_text = [item1 + item2 for item1, item2 in ocr_ratio_text_tuple]
+                ocr_timestamp_text = re.findall(r'\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}', ocr_res[2])
+                ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[3])
+            else:
+                ocr_ratio_text = []
+                ocr_timestamp_text = []
+                ocr_measurement_text = re.findall(r'\d+\.\d+\s+[A-Za-z%]+', ocr_res[2])
+        ####################
 
         ### 고정 문자 중 잘못된 문자 검증 ###
         ocr_fixed_text_counter = Counter(ocr_fixed_text)
@@ -227,6 +278,7 @@ class Evaluation:
         timestamp_results = []
         meas_results = [] 
         meas_modbus_results = [] 
+        print(ocr_ratio_text, ocr_timestamp_text)
 
         ### 검사 test_step 개념: 
         ### RELAY:1, METER:2, 
@@ -235,10 +287,19 @@ class Evaluation:
         ### LL:0001 LN:0002,
         ### Min:00001 Max:00002
         if ocr_ratio_text and ocr_timestamp_text:
-            ratio_error, ratio_results = validate_ratio(ocr_ratio_text, ratio_lower, ratio_upper)
+            ratio_error, ratio_results = validate_ratio(ocr_ratio_text, ratio_rules)
             all_meas_results.append(ratio_error)
             timestamp_error, timestamp_results, timestamp_numeric_list = validate_timestamp(ocr_timestamp_text, reset_time)
             all_meas_results.append(timestamp_error)
+            meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, meas_rules)
+            all_meas_results.append(meas_error)
+            print(modbus_meas_value)
+            meas_modbus_error, meas_modbus_results = validate_modbus(modbus_meas_value, meas_numeric_list)
+            all_modbus_results.append(meas_modbus_error)
+
+        elif ocr_ratio_text and not ocr_timestamp_text:
+            ratio_error, ratio_results = validate_ratio(ocr_ratio_text, ratio_rules)
+            all_meas_results.append(ratio_error)
             meas_error, meas_results, meas_numeric_list = validate_measurement(ocr_measurement_text, meas_rules)
             all_meas_results.append(meas_error)
             print(modbus_meas_value)
@@ -260,8 +321,6 @@ class Evaluation:
             print(modbus_meas_value)
             meas_modbus_error, meas_modbus_results = validate_modbus(modbus_meas_value, meas_numeric_list)
             all_modbus_results.append(meas_modbus_error)
-        
-        
         
         elif not self.condition_met:
             print("Nothing matching word")
@@ -324,238 +383,6 @@ class Evaluation:
         dest_image_path = os.path.join(base_save_path, file_name_without_ip)
         shutil.copy(img_path, dest_image_path)
 
-    ### No source, No Demo ###
-    def eval_none_test(self, ocr_res, right_key, ocr_res_meas=None, image_path=None, img_result=None):
-        self.meas_error = False
-        self.condition_met = False
-        
-        image = cv2.imread(image_path)
-
-        right_list = ' '.join(text.strip() for text in right_key).split()
-        ocr_rt_list = ' '.join(result.strip() for result in ocr_res).split()
-
-        right_counter = Counter(right_list)
-        ocr_rt_counter = Counter(ocr_rt_list)
-
-        self.ocr_error = list((ocr_rt_counter - right_counter).elements())
-        right_error = list((right_counter - ocr_rt_counter).elements())
-
-        def check_results(values, limits, ocr_meas_subset):
-            self.condition_met = True
-            meas_results = []
-
-            if isinstance(ocr_meas_subset, (float, int)):
-                results = {values[0]: str(ocr_meas_subset)}
-            elif isinstance(ocr_meas_subset, list):
-                results = {name: str(value) for name, value in zip(values, ocr_meas_subset)}
-            else:
-                print("Unexpected ocr_meas_subset type.")
-                return
-
-            for name, value in results.items():
-                match = re.match(r"([-+]?\d+\.?\d*)\s*(\D*)", value)
-                if match:
-                    numeric_value = float(match.group(1))  # 숫자 부분
-                    unit = match.group(2)  # 단위 부분 (예: V)
-                else:
-                    numeric_value = None
-                    unit = value.strip()
-
-                    # 텍스트 정답을 처리하는 로직 추가
-                text_matches = [lim for lim in limits if isinstance(lim, str)]
-                if any(text_match == value for text_match in text_matches):
-                    print(f"{name or 'empty'} = {value} (PASS by text match)")
-                    meas_results.append(f"{name or 'empty'} = {value} (PASS by text)")
-                    
-                elif numeric_value is not None and len(limits) >= 3 and isinstance(limits[0], (int, float)):
-                    if limits[0] <= numeric_value <= limits[1] and limits[2] == unit:
-                        print(f"{name} = {numeric_value}{unit} (PASS)")
-                        meas_results.append(f"{numeric_value}{unit} (PASS)")
-                    else:
-                        print(f"{name} = {value} (FAIL)")
-                        meas_results.append(f"{value} (FAIL)")
-                        self.meas_error = True
-                else:
-                    print(f"{name} = {value} (FAIL)")
-                    meas_results.append(f"{value} (FAIL)")
-                    self.meas_error = True
-            return meas_results
-        
-        all_meas_results = []
-
-        if "RMS Voltage" in ''.join(ocr_res[0]) or "Fund. Volt." in ''.join(ocr_res[0]):
-            if self.ocr_manager.color_detection(image, cc.color_rms_vol_ll.value) <= 10:
-                all_meas_results.extend(check_results(["AB", "BC", "CA", "Aver"], (0, 0, "V"), ocr_res_meas[:5]))
-            elif self.ocr_manager.color_detection(image, cc.color_rms_vol_ln.value) <= 10:
-                all_meas_results.extend(check_results(["A", "B", "C", "Aver"], (0, 0, "V"), ocr_res_meas[:5]))
-            else:
-                print("RMS Voltage missed")
-
-        elif "Total Harmonic" in ''.join(ocr_res[0]):
-            if self.ocr_manager.color_detection(image, cc.color_main_menu_vol.value) <= 10: 
-                if self.ocr_manager.color_detection(image, cc.color_vol_thd_ll.value) <= 10:
-                    all_meas_results.extend(check_results(["AB", "BC", "CA"], (0, 0, "%"), ocr_res_meas[:4]))
-                elif self.ocr_manager.color_detection(image, cc.color_vol_thd_ln.value) <= 10:
-                    all_meas_results.extend(check_results(["A", "B", "C"], (0, 0, "%"), ocr_res_meas[:4]))
-                else:
-                    print("Total Harmonic missed")
-
-        elif "Frequency" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(["Freq"], (0, 0, "Hz"), ocr_res_meas[:1]))
-
-        elif "Residual Voltage" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(["RMS", "Fund."], (0, 0, "V"), ocr_res_meas[:2]))
-
-        elif "RMS Current" in ''.join(ocr_res[0]) or "Fundamental Current" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(["A %", "B %", "C %", "Aver %"], (0, 0, "%"), ocr_res_meas[:4]))
-            all_meas_results.extend(check_results(["A", "B", "C", "Aver"], (0, 0, "A"), ocr_res_meas[4:]))
-
-        elif "Total Harmonic" in ''.join(ocr_res[0]):
-            if self.ocr_manager.color_detection(image, cc.color_main_menu_curr.value) <= 10: 
-                all_meas_results.extend(check_results(["A", "B", "C"], (0, 0, "%"), ocr_res_meas[:3]))
-
-        elif "Total Demand" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(["A", "B", "C"], (0, 0, "%"), ocr_res_meas[:3]))
-
-        elif "Crest Factor" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(["A", "B", "C"], (0, 0, ""), ocr_res_meas[:3]))
-
-        elif "K-Factor" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(["A", "B", "C"], (0, 0, ""), ocr_res_meas[:3]))
-
-        elif "Residual Current" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(["RMS"], (0, 0, "A"), ocr_res_meas[:1]))
-            all_meas_results.extend(check_results(["RMS"], (0, 0, "A"), ocr_res_meas[1:2]))
-            
-        elif "Active Power" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(["A %", "B %", "C %", "Total %"], (0, 0, "%"), ocr_res_meas[:4]))
-            all_meas_results.extend(check_results(["A", "B", "C"], (0, 0, "kW"), ocr_res_meas[4:7]))
-            all_meas_results.extend(check_results(["Total"], (0, 0, "kW"), ocr_res_meas[7:8]))
-            
-        elif "Reactive Power" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(['A%', 'B%', 'C%', 'Total%'],(0, 0, "%"), ocr_res_meas[:4]))
-            all_meas_results.extend(check_results(["A", "B", "C"], (0, 0, "kVAR"), ocr_res_meas[4:7]))
-            all_meas_results.extend(check_results(["Total"], (0, 0, "kVAR"), ocr_res_meas[7:8]))
-            
-        elif "Apparent Power" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(['A', 'B', 'C', 'Total'],(0, 0, "%"), ocr_res_meas[:4]))
-            all_meas_results.extend(check_results(["A", "B", "C"], (0, 0, "kVA"), ocr_res_meas[4:7]))
-            all_meas_results.extend(check_results(["Total"], (0, 0, "kVA"), ocr_res_meas[7:8]))
-            
-        elif "Power Factor" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(['A%', 'B%', 'C%', 'Total%'],(0, 0, "No Load"), ocr_res_meas[:4]))
-            all_meas_results.extend(check_results(["A", "B", "C", "Total"], (1, 1, ""), ocr_res_meas[4:8]))
-            
-        elif "Phasor" in ''.join(ocr_res[0]):
-            if self.ocr_manager.color_detection(image, cc.color_phasor_vll.value) <= 10:
-                all_meas_results.extend(check_results(["AB", "BC", "CA"], (0, 0, "V"), ocr_res_meas[:3]))
-                all_meas_results.extend(check_results(["A_Curr", "B_Curr", "C_Curr"], (0, 0, "A"), ocr_res_meas[3:6]))
-                all_meas_results.extend(check_results(["AB_angle"], (0, 0, ""), ocr_res_meas[6:7]))
-                all_meas_results.extend(check_results(["BC_angle"], (0, 0, ""), ocr_res_meas[7:8]))
-                all_meas_results.extend(check_results(["CA_angle"], (0, 0, ""), ocr_res_meas[8:9]))
-                all_meas_results.extend(check_results(["A_angle_cur"], (0, 0, ""), ocr_res_meas[9:10]))
-                all_meas_results.extend(check_results(["B_angle_cur"], (0, 0, ""), ocr_res_meas[10:11]))
-                all_meas_results.extend(check_results(["C_angle_cur"], (0, 0, ""), ocr_res_meas[11:12]))
-                all_meas_results.extend(check_results([cr.img_ref_phasor_all_vll_none.value], (0.99, 1, ""), img_result[0]))
-                all_meas_results.extend(check_results(["angle_image_1", "angle_image_2"], (0.99, 1, ""), img_result[1:3]))
-                
-            elif self.ocr_manager.color_detection(image, cc.color_phasor_vln.value) <= 10:
-                all_meas_results.extend(check_results(["A", "B", "C"], (0, 0, "V"), ocr_res_meas[:3]))
-                all_meas_results.extend(check_results(["A_Curr", "B_Curr", "C_Curr"], (0, 0, "A"), ocr_res_meas[3:6]))
-                all_meas_results.extend(check_results(["A_angle"], (0, 0, ""), ocr_res_meas[6:7]))
-                all_meas_results.extend(check_results(["B_angle"], (0, 0, ""), ocr_res_meas[7:8]))
-                all_meas_results.extend(check_results(["C_angle"], (0, 0, ""), ocr_res_meas[8:9]))
-                all_meas_results.extend(check_results(["A_angle_cur"], (0, 0, ""), ocr_res_meas[9:10]))
-                all_meas_results.extend(check_results(["B_angle_cur"], (0, 0, ""), ocr_res_meas[10:11]))
-                all_meas_results.extend(check_results(["C_angle_cur"], (0, 0, ""), ocr_res_meas[11:12]))
-                all_meas_results.extend(check_results([cr.img_ref_phasor_all_vln_none.value], (0.99, 1, ""), img_result[0]))
-                all_meas_results.extend(check_results(["angle_image_1", "angle_image_2"], (0, 1, ""), img_result[1:3]))
-                
-            else:
-                print("demo test evaluation error")
-
-        elif "Harmonics" in ''.join(ocr_res[0]):
-            if self.ocr_manager.color_detection(image, cc.color_harmonics_vol.value) <= 10:
-                if img_result is not None:
-                    all_meas_results.extend(check_results(["harmonics_img_detect"], (0.9, 1, ""), img_result))
-                    all_meas_results.extend(check_results(["VOL_A_THD", "VOL_B_THD", "VOL_C_THD"], (0, 0, "%"), ocr_res_meas[:3]))
-                    all_meas_results.extend(check_results(["VOL_A_Fund", "VOL_B_Fund", "VOL_C_Fund"], (0, 0, "v"), ocr_res_meas[3:6]))
-                    all_meas_results.extend(check_results(["harmonic_image"], (0.9, 1, ""), img_result))
-                elif "[%]Fund" in ''.join(ocr_res[1]) or "[%]RMS" in ''.join(ocr_res[1]):
-                    all_meas_results.extend(check_results(["harmonic_%_img"], (0.9, 1, ""), img_result))
-                    all_meas_results.extend(check_results(["VOL_A_THD", "VOL_B_THD", "VOL_C_THD"], (0, 0, "%"), ocr_res_meas[:3]))
-                    all_meas_results.extend(check_results(["VOL_A_Fund", "VOL_B_Fund", "VOL_C_Fund"], (0, 0, "v"), ocr_res_meas[3:6]))
-                    all_meas_results.extend(check_results(["harmonic_image"], (0.9, 1, ""), img_result))
-                elif "Text" in ''.join(ocr_res[1]):
-                    print(ocr_res_meas)
-                    all_meas_results.extend(check_results(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], (0, 0, ""), ocr_res_meas[0:10]))
-                    print("test")
-            else:
-                if img_result is not None:
-                    all_meas_results.extend(check_results(["harmonics_img_detect"], (0.9, 1, ""), img_result))  
-                    # all_meas_results.extend(check_results(["CURR_A_THD", "CURR_B_THD", "CURR_C_THD"], (0, 0, "%"), ocr_res_meas[:3]))
-                    # all_meas_results.extend(check_results(["CURR_A_Fund", "CURR_B_Fund", "CURR_C_Fund"], (0, 0, "A"), ocr_res_meas[3:6]))
-                    # all_meas_results.extend(check_results(["harmonic_image"], (0.9, 1, ""), img_result))
-                elif "[%]Fund" in ''.join(ocr_res[1]) or "[%]RMS" in ''.join(ocr_res[1]):
-                    all_meas_results.extend(check_results(["harmonic_%_img"], (0.9, 1, ""), img_result))
-                elif "Text" in ''.join(ocr_res[1]):
-                    all_meas_results.extend("PASS?")
-            
-                    
-        elif "Waveform" in ''.join(ocr_res[0]):
-            if 0 < img_result < 1:
-                all_meas_results.extend(check_results(["waveform_image"], (0.945, 1, ""), img_result))
-            else:
-                all_meas_results.extend(check_results(["waveform_img_detect"], (1, 1, ""), img_result))
-                
-        elif "Volt. Symm. Component" in ''.join(ocr_res[0]):
-            if self.ocr_manager.color_detection(image, cc.color_symm_thd_vol_ll.value) <= 10:
-                all_meas_results.extend(check_results(['V1'], (0, 0, "V1"), ocr_res_meas[0:1]))
-                all_meas_results.extend(check_results(['V2'], (0, 0, "V2"), ocr_res_meas[1:2]))
-                all_meas_results.extend(check_results(['V1'], (0, 0, "V" or "v"), ocr_res_meas[2:3]))
-                all_meas_results.extend(check_results(['V2'], (0, 0, "V" or "v"), ocr_res_meas[3:4]))
-            elif self.ocr_manager.color_detection(image, cc.color_symm_thd_vol_ln.value) <= 10:
-                all_meas_results.extend(check_results(['V1'], (0, 0, "V1"), ocr_res_meas[0:1]))
-                all_meas_results.extend(check_results(['V2'], (0, 0, "V2"), ocr_res_meas[1:2]))
-                all_meas_results.extend(check_results(['V0'], (0, 0, "V0"), ocr_res_meas[2:3]))
-                all_meas_results.extend(check_results(['V1'], (0, 0, "V" or "v"), ocr_res_meas[3:4]))
-                all_meas_results.extend(check_results(['V2'], (0, 0, "V" or "v"), ocr_res_meas[4:5]))
-                all_meas_results.extend(check_results(['V0'], (0, 0, "V" or "v"), ocr_res_meas[5:6]))
-                
-        elif "Voltage Unbalance" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(["NEMA LL"], (0, 0, "LL"), ocr_res_meas[0:1]))
-            all_meas_results.extend(check_results(["NEMA LN"], (0, 0, "LN"), ocr_res_meas[1:2]))
-            all_meas_results.extend(check_results(["U2"], (0, 0, "U2"), ocr_res_meas[2:3]))
-            all_meas_results.extend(check_results(["U0"], (0, 0, "U0"), ocr_res_meas[3:4]))
-            all_meas_results.extend(check_results(["NEMA LL", "NEMA LN", "U2", "U0"], (0, 1, "%"), ocr_res_meas[4:8]))
-            
-        elif "Curr. Symm. Component" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(["I1"], (0, 0, "l1"), ocr_res_meas[0:1]))
-            all_meas_results.extend(check_results(["I2"], (0, 0, "l2"), ocr_res_meas[1:2]))
-            all_meas_results.extend(check_results(["I0"], (0, 0, "l0"), ocr_res_meas[2:3]))
-            all_meas_results.extend(check_results(["I1"], (0, 0, "A"), ocr_res_meas[3:4]))
-            all_meas_results.extend(check_results(["I2"], (0, 0, "A"), ocr_res_meas[4:5]))
-            all_meas_results.extend(check_results(["I0"], (0, 0, "A"), ocr_res_meas[5:6]))
-            
-        elif "Current Unbalance" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results([""], (0, 0, "empty"), ocr_res_meas[0:1]))
-            all_meas_results.extend(check_results(["U2"], (0, 0, "U2"), ocr_res_meas[1:2]))
-            all_meas_results.extend(check_results(["U0"], (0, 0, "U0"), ocr_res_meas[2:3]))
-            all_meas_results.extend(check_results([""], (0, 0, "%"), ocr_res_meas[3:4]))
-            all_meas_results.extend(check_results(["U2"], (0, 0, "%"), ocr_res_meas[4:5]))
-            all_meas_results.extend(check_results(["U0"], (0, 0, "%"), ocr_res_meas[5:6]))
-        
-        elif "Demand Currnet" in ''.join(ocr_res[0]):
-            all_meas_results.extend(check_results(["A%", "B%", "C%", "Aver%"], (0, 0, "%"), ocr_res_meas[0:5]))
-            all_meas_results.extend(check_results(["A", "B", "C", "Aver"], (0, 0, "A"), ocr_res_meas[5:9]))
-            
-        elif not self.condition_met:
-            print("Nothing matching word")
-
-        print(f"OCR - 정답: {self.ocr_error}")
-        print(f"정답 - OCR: {right_error}")
-
-        return self.ocr_error, right_error, self.meas_error, ocr_res, all_meas_results
     
     def eval_setup_test(self, ocr_res, setup_expected_value, title, ecm_access_address, ecm_address, modbus_ref, modbus_unit=None, eval_type=None, sm_res=None, sm_condition=None, except_addr=None):
         """
