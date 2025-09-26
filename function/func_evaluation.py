@@ -1,7 +1,7 @@
 import re
 import numpy as np
 import cv2
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import shutil
 import os
 import glob
@@ -36,59 +36,49 @@ class Evaluation:
     def __init__(self):
         pass
 
-    # def load_image_file(self, search_pattern):
-    #     self.now = self.modbus_labels.system_time_read()
-    #     # self.now = datetime.now()
-    #     self.file_time_diff = {}
 
-    #     for file_path in glob.glob(search_pattern, recursive=True):
-    #         creation_time = datetime.fromtimestamp(os.path.getctime(file_path))
-    #         time_diff = abs((self.now - creation_time).total_seconds())
-    #         self.file_time_diff[file_path] = time_diff
-
-    #     closest_file = min(self.file_time_diff,
-    #                         key=self.file_time_diff.get, default=None)
-    #     normalized_path = os.path.normpath(closest_file)
-    #     self.latest_image_path = normalized_path
-
-    #     print("가장 가까운 시간에 생성된 파일:", normalized_path)
-
-    #     return self.latest_image_path
-
-    def load_image_file(self, search_pattern):
-        # 1. 기준이 될 장치의 현재 시간을 먼저 읽어옵니다.
-        start_time = self.modbus_labels.system_time_read()
+    def load_image_file(self, search_pattern, start_time, retries=3, delay=1):
         if not start_time:
             print("Error: 기준 시간을 장치에서 읽어오지 못했습니다.")
             return None
+        print(f"기준 시간: {start_time.strftime('%Y%m%d_%H%M%S')}")
+        time_margin = timedelta(seconds=5)
+        start_time = start_time - time_margin
+    
+        for attempt in range(retries):
+            candidate_files = []
+            all_files = glob.glob(search_pattern, recursive=True)
 
-        print(f"기준 시간: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            for file_path in all_files:
+                filename = os.path.basename(file_path)
+                match = re.search(r'(\d{8}_\d{6})', filename)
+                if not match:
+                    continue
+                
+                try:
+                    timestamp_str = match.group(1)
+                    file_time = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
+                    # print(f"파일 시간: {file_time}")
+                    
+                    if file_time > start_time:
+                        candidate_files.append((file_time, file_path))
+                except ValueError:
+                    continue
 
-        # 2. 기준 시간 이후에 생성된 파일들만 후보로 추립니다.
-        candidate_files = []
-        all_files = glob.glob(search_pattern, recursive=True)
+            if candidate_files:
+                candidate_files.sort()
+                latest_image_path = candidate_files[0][1]
+                
+                normalized_path = os.path.normpath(latest_image_path)
+                print("찾은 파일:", normalized_path)
+                return normalized_path
 
-        for file_path in all_files:
-            # 파일의 생성 시간을 datetime 객체로 변환합니다.
-            creation_time = datetime.fromtimestamp(os.path.getctime(file_path))
-            
-            # 파일 생성 시간이 기준 시간보다 이후인지 확인합니다.
-            if creation_time > start_time:
-                candidate_files.append(file_path)
+            if attempt < retries - 1:
+                print(f"파일을 찾지 못했습니다. {delay}초 후 다시 시도합니다... (시도 {attempt + 1}/{retries})")
+                time.sleep(delay)
 
-        # 3. 후보 파일이 있는지 확인합니다.
-        if not candidate_files:
-            print("경고: 기준 시간 이후에 생성된 새 파일을 찾지 못했습니다.")
-            return None
-
-        # 4. 후보 파일들 중에서 생성 시간이 가장 빠른(기준 시간과 가장 가까운) 파일을 선택합니다.
-        #    min() 함수와 os.path.getctime을 key로 사용하여 가장 오래된 파일(즉, 기준 시간에 가장 가까운 파일)을 찾습니다.
-        latest_image_path = min(candidate_files, key=os.path.getctime)
-        
-        normalized_path = os.path.normpath(latest_image_path)
-        print("찾은 파일:", normalized_path)
-
-        return normalized_path
+        print(f"경고: {retries}번 시도 후에도 새 파일을 찾지 못했습니다.")
+        return None
 
     ### With Demo Balance ###
     def eval_test_mode_balance(self, ocr_res, correct_answers, modbus_meas_value, meas_rules, ratio_rules, reset_time=None, modbus_timestamp_value=None, image_path=None):
@@ -109,7 +99,18 @@ class Evaluation:
             for item, rules in zip(percent_list, rules_list):
                 match = re.match(r"([-+]?\d+\.?\d*)\s*(.*)", item)
 
-                if match and match.group(1):
+                if 'text' in rules:
+                    ocr_text = item.strip()
+                    expected_text = rules['text']
+                    if ocr_text == expected_text:
+                        result_str = f"'{ocr_text}' vs '{expected_text}' -> PASS"
+                        results_list.append(result_str)
+                    else:
+                        result_str = f"'{ocr_text}' vs '{expected_text}' -> FAIL"
+                        percent_error = True
+                        results_list.append(result_str)
+
+                elif match and match.group(1):
                     numeric_value = float(match.group(1))
                     unit = match.group(2).strip()
 

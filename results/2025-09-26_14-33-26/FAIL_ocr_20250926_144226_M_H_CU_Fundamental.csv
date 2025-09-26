@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Fundamental Current Min Max', 'A B C Average']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,"['49.6 % -> PASS', '49.8 % -> PASS', '49.7 % -> PASS', '49.8 % -> PASS']"
+Timestamp Results,"['2025-09-26 14:42:25 -> PASS', '2025-09-26 14:42:24 -> PASS', '2025-09-26 14:42:24 -> PASS', '2025-09-26 14:42:21 -> PASS'] / Timestamp Standard: 2025-09-26 14:42:17+00:00"
+Measurement Results,"[""'24.80 A' -> PASS"", ""'24.90 A' -> PASS"", ""'24.87 A' -> PASS"", ""'24.88 A' -> PASS""]"
+Modbus Measurement,"['109.7', '109.1', '109.5', '109.5']"

@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Power Factor Min Max', 'A B C Total']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,[] / Timestamp Standard: None
+Measurement Results,['Length mismatch']
+Modbus Measurement,"['0.863', '0.864', '0.865', '0.865']"

@@ -1,8 +1,0 @@
-Parameter,Value
-Data View Fixed text,"['RMS Voltage L-L L-N Min Max', 'AB BC CA Average']"
-OCR Errors (Extra),"['RMS Voltage L-L L-N Min Max', 'AB BC CA Average'] (FAIL)"
-OCR Errors (Missing),"['Total Harmonic Distortion Max', 'A B C'] (FAIL)"
-Meas Ratio Results,[]
-Timestamp Results,[] / Timestamp Standard: 2025-09-25 15:54:11+00:00
-Measurement Results,['Length mismatch']
-Modbus Measurement,"['1.947', '1.914', '1.953']"

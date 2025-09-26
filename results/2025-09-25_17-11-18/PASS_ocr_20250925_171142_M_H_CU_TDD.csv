@@ -1,8 +1,0 @@
-Parameter,Value
-Data View Fixed text,"['Total Demand Distortion Max', 'A B C']"
-OCR Errors (Extra),[] (PASS)
-OCR Errors (Missing),[] (PASS)
-Meas Ratio Results,[]
-Timestamp Results,"['2025-09-25 17:11:37 -> PASS', '2025-09-25 17:11:37 -> PASS', '2025-09-25 17:11:36 -> PASS'] / Timestamp Standard: 2025-09-25 17:11:33+00:00"
-Measurement Results,"[""'1.9 %' -> PASS"", ""'2.0 %' -> PASS"", ""'2.0 %' -> PASS""]"
-Modbus Measurement,"['1.924', '1.943', '1.933']"

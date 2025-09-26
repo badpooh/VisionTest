@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Frequency Min Max', 'Frequency']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,['2025-09-26 14:39:23 -> PASS'] / Timestamp Standard: 2025-09-26 14:39:19+00:00
+Measurement Results,"[""'60.036 Hz' -> PASS""]"
+Modbus Measurement,['60.04']

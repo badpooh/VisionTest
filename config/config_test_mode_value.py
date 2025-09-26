@@ -74,16 +74,68 @@ class TestModeBalance(Enum):
 				{'low': 1.5, 'high': 2.5, 'unit': "%"},
 				{'low': 1.5, 'high': 2.5, 'unit': "%"}]
 	curr_cf = [
-				{'low': 1.400, 'high': 1.500, 'unit': "%"},
-				{'low': 1.400, 'high': 1.500, 'unit': "%"},
-				{'low': 1.400, 'high': 1.500, 'unit': "%"}]
+				{'low': 1.400, 'high': 1.500, 'unit': ""},
+				{'low': 1.400, 'high': 1.500, 'unit': ""},
+				{'low': 1.400, 'high': 1.500, 'unit': ""}]
 	curr_kf = [
-				{'low': 1.200, 'high': 1.500, 'unit': "%"},
-				{'low': 1.200, 'high': 1.500, 'unit': "%"},
-				{'low': 1.200, 'high': 1.500, 'unit': "%"}]
+				{'low': 1.200, 'high': 1.500, 'unit': ""},
+				{'low': 1.200, 'high': 1.500, 'unit': ""},
+				{'low': 1.200, 'high': 1.500, 'unit': ""}]
 	curr_residual = [
 					{'low': 0.500, 'high': 1.000, 'unit': 'A'},
 					{'low': 0.100, 'high': 0.500, 'unit': 'A'},]
+	
+	### Power
+	pow_p = [
+				{'low': 2.300, 'high': 2.400, 'unit': "kW"},
+				{'low': 2.300, 'high': 2.400, 'unit': "kW"},
+				{'low': 2.300, 'high': 2.400, 'unit': "kW"},
+				{'low': 6.900, 'high': 7.200, 'unit': "kW"}]
+	pow_p_ratio = [
+				{'low': 40.0, 'high': 45.0, 'unit': "%"},
+				{'low': 40.0, 'high': 45.0, 'unit': "%"},
+				{'low': 40.0, 'high': 45.0, 'unit': "%"},
+				{'low': 40.0, 'high': 45.0, 'unit': "%"}]
+	pow_q = [
+				{'low': 1.300, 'high': 1.400, 'unit': "kVAR"},
+				{'low': 1.300, 'high': 1.400, 'unit': "kVAR"},
+				{'low': 1.300, 'high': 1.400, 'unit': "kVAR"},
+				{'low': 3.900, 'high': 4.200, 'unit': "kVAR"}]
+	pow_q_ratio = [
+				{'low': 20.0, 'high': 30.0, 'unit': "%"},
+				{'low': 20.0, 'high': 30.0, 'unit': "%"},
+				{'low': 20.0, 'high': 30.0, 'unit': "%"},
+				{'low': 20.0, 'high': 30.0, 'unit': "%"}]
+	pow_s = [
+				{'low': 1.300, 'high': 1.400, 'unit': "kVAR"},
+				{'low': 1.300, 'high': 1.400, 'unit': "kVAR"},
+				{'low': 1.300, 'high': 1.400, 'unit': "kVAR"},
+				{'low': 3.900, 'high': 4.200, 'unit': "kVAR"}]
+	pow_s_ratio = [
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"},
+				{'low': 49.0, 'high': 51.0, 'unit': "%"}]
+	pow_pf = [
+				{'low': 0.850, 'high': 0.900, 'unit': ""},
+				{'low': 0.850, 'high': 0.900, 'unit': ""},
+				{'low': 0.850, 'high': 0.900, 'unit': ""},
+				{'low': 0.850, 'high': 0.900, 'unit': ""}]
+	pow_pf_ratio = [
+				{'text': "Lag"},
+				{'text': "Lag"},
+				{'text': "Lag"},
+				{'text': "Lag"}]
+	pow_demand = [
+				{'low': 2.300, 'high': 2.400, 'unit': "kW"},
+				{'low': 2.300, 'high': 2.400, 'unit': "kW"},
+				{'low': 2.300, 'high': 2.400, 'unit': "kW"},
+				{'low': 6.900, 'high': 7.200, 'unit': "kW"}]
+	pow_demand_ratio = [
+				{'low': 40.0, 'high': 45.0, 'unit': "%"},
+				{'low': 40.0, 'high': 45.0, 'unit': "%"},
+				{'low': 40.0, 'high': 45.0, 'unit': "%"},
+				{'low': 40.0, 'high': 45.0, 'unit': "%"}]
 
 
 	

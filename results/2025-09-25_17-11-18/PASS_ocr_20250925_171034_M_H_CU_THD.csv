@@ -1,8 +1,0 @@
-Parameter,Value
-Data View Fixed text,"['Total Harmonic Distortion Max', 'A B C']"
-OCR Errors (Extra),[] (PASS)
-OCR Errors (Missing),[] (PASS)
-Meas Ratio Results,[]
-Timestamp Results,[] / Timestamp Standard: 2025-09-25 17:10:50+00:00
-Measurement Results,"[""'1.9 %' -> PASS"", ""'1.9 %' -> PASS"", ""'1.9 %' -> PASS""]"
-Modbus Measurement,"['1.917', '1.937', '1.953']"

@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Demand Active Power Peak', 'A B C Total']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,"['42.9 % -> PASS', '42.9 % -> PASS', '43.1 % -> PASS', '43.0 % -> PASS']"
+Timestamp Results,[] / Timestamp Standard: None
+Measurement Results,"[""'2.356 kW' -> PASS"", ""'2.353 kW' -> PASS"", ""'2.364 kW' -> PASS"", ""'7.072 kW' -> PASS""]"
+Modbus Measurement,"['2.356', '2.353', '2.364', '7.072']"

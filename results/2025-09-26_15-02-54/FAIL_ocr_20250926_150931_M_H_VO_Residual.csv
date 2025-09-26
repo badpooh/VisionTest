@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Residual I Voltage Min Max', 'RMS Fund.']"
+OCR Errors (Extra),['Residual I Voltage Min Max'] (FAIL)
+OCR Errors (Missing),"['Residual Voltage', 'Min Max'] (FAIL)"
+Meas Ratio Results,[]
+Timestamp Results,"['2025-09-26 15:09:26 -> PASS', '2025-09-26 15:09:28 -> PASS'] / Timestamp Standard: 2025-09-26 15:09:23+00:00"
+Measurement Results,"[""'6.326 V' -> PASS"", ""'1.046 V' -> PASS""]"
+Modbus Measurement,"['6.484', '1.298']"

@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Total Demand Distortion Max', 'A B C']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,[] / Timestamp Standard: None
+Measurement Results,"[""'1.9 %' -> PASS"", ""'1.9 %' -> PASS"", ""'1.9 %' -> PASS""]"
+Modbus Measurement,"['1.870', '1.892', '1.902']"

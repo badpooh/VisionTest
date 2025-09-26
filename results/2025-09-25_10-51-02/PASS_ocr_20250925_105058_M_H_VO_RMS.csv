@@ -1,8 +1,0 @@
-Parameter,Value
-Data View Fixed text,"['RMS Voltage L-L L-N Min Max', 'AB BC CA Average']"
-OCR Errors (Extra),[] (PASS)
-OCR Errors (Missing),[] (PASS)
-Meas Ratio Results,[]
-Timestamp Results,"['2025-09-25 10:50:53 -> PASS', '2025-09-25 10:50:56 -> PASS', '2025-09-25 10:50:53 -> PASS', '2025-09-25 10:50:55 -> PASS'] / Timestamp Standard: 2025-09-25 10:50:49+00:00"
-Measurement Results,"[""'189.6 V' -> PASS"", ""'189.6 V' -> PASS"", ""'189.6 V' -> PASS"", ""'189.6 V' -> PASS""]"
-Modbus Measurement,"['189.7', '189.5', '189.6', '189.7']"
