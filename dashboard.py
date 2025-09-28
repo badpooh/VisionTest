@@ -67,18 +67,9 @@ class MyDashBoard(QMainWindow, Ui_MainWindow):
         self.setting_ip.spSelected.connect(self.on_sp_selected)
         self.setting_ip.spSelected.connect(self.connect_manager.sp_update)
 
-        self.btn_home_1.clicked.connect(self.switch_to_homePage)
-        self.btn_home_2.clicked.connect(self.switch_to_homePage)
+       
         self.btn_ui_test_1.clicked.connect(self.switch_to_uiTestPage)
         self.btn_ui_test_2.clicked.connect(self.switch_to_uiTestPage)
-        self.btn_setup_test_1.clicked.connect(self.switch_to_setupTestPage)
-        self.btn_demo_test.clicked.connect(self.switch_to_setupTestPage)
-        self.btn_frame_test_1.clicked.connect(self.switch_to_frameTestPage)
-        self.btn_frame_test_2.clicked.connect(self.switch_to_frameTestPage)
-        self.btn_select_webcam.clicked.connect(self.select_webcam)
-        self.btn_start_webcam.clicked.connect(self.start_webcam)
-        self.btn_stop_webcam.clicked.connect(self.stop_webcam)
-        self.lineEdit.returnPressed.connect(self.set_focus)
 
         self.btn_test_start.clicked.connect(self.test_start)
         self.btn_test_stop.clicked.connect(self.test_stop)
@@ -117,10 +108,10 @@ class MyDashBoard(QMainWindow, Ui_MainWindow):
         self.cur_sp = self.sp_display.setText(selected_sp) 
 
     def switch_to_homePage(self):
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(1)
 
     def switch_to_uiTestPage(self):
-        self.stackedWidget.setCurrentIndex(1)
+        self.stackedWidget.setCurrentIndex(0)
 
     def switch_to_setupTestPage(self):
         self.stackedWidget.setCurrentIndex(2)
