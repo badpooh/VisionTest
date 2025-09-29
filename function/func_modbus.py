@@ -53,6 +53,27 @@ class ModbusLabels:
 			# print(self.response.isError())
 			print("setup_client가 연결되어 있지 않습니다.")
 		return test_mode
+	
+	def test_mode_off(self):
+		self.touch_manager.uitest_mode_start()
+		values = [2300, 0, 700, 1]
+		values_control = [2300, 0, 1600, 1]
+		if self.connect_manager.setup_client is not None: 
+			for value in values:
+				self.response = self.connect_manager.setup_client.write_register(ConfigMap.addr_setup_lock.value[0], value)
+			# time.sleep(0.6)
+			for value_control in values_control:
+				self.response = self.connect_manager.setup_client.write_register(ConfigMap.addr_control_lock.value[0], value_control)
+				time.sleep(0.6)
+			self.response = self.connect_manager.setup_client.read_holding_registers(4000, count=3)
+			self.response = self.connect_manager.setup_client.write_register(4002, 60)
+			self.response = self.connect_manager.setup_client.write_register(4000, 0)
+			self.response = self.connect_manager.setup_client.write_register(4001, 1)
+			print("Test Mode OFF")
+		else:
+			# print(self.response.isError())
+			print("setup_client가 연결되어 있지 않습니다.")
+		return 
 
 	def noload_test_setting(self):
 		test_mode = "NoLoad"

@@ -1,11 +1,17 @@
 import sqlite3
 import os
+import sys
 
 class IPDataBase:
     def __init__(self, db_path=None):
         if db_path is None:
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            db_path = os.path.join(current_dir, 'ip_data.db')
+            if getattr(sys, 'frozen', False):
+                application_path = os.path.dirname(sys.executable)
+            else:
+                application_path = os.path.dirname(os.path.abspath(__file__))
+            
+            db_path = os.path.join(application_path, 'ip_data.db')
+        print(f"Connecting to DB at: {db_path}")
         self.conn = sqlite3.connect(db_path)
         self.create_table()
         

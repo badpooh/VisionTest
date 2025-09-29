@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Demand Current Peak', 'A B C Average']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,"['49.7 % -> PASS', '49.9 % -> PASS', '49.8 % -> PASS', '49.8 % -> PASS']"
+Timestamp Results,[] / Timestamp Standard: None
+Measurement Results,"[""'24.84 A' -> PASS"", ""'24.94 A' -> PASS"", ""'24.90 A' -> PASS"", ""'24.89 A' -> PASS""]"
+Modbus Measurement,"['Modbus: 24.840, OCR: 24.840 -> PASS (Diff: 0.000)', 'Modbus: 24.940, OCR: 24.940 -> PASS (Diff: 0.000)', 'Modbus: 24.900, OCR: 24.900 -> PASS (Diff: 0.000)', 'Modbus: 24.890, OCR: 24.890 -> PASS (Diff: 0.000)']"

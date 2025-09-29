@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['RMS Voltage L-L L-N Min Max', 'A B C Average']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,[] / Timestamp Standard: 2025-09-29 11:24:22+00:00
+Measurement Results,"[""'109.5 V' -> PASS"", ""'109.1 V' -> PASS"", ""'109.4 V' -> PASS"", ""'109.5 V' -> PASS""]"
+Modbus Measurement,"['Modbus: 109.600, OCR: 109.500 -> PASS (Diff: 0.100)', 'Modbus: 109.300, OCR: 109.100 -> PASS (Diff: 0.200)', 'Modbus: 109.500, OCR: 109.400 -> PASS (Diff: 0.100)', 'Modbus: 109.500, OCR: 109.500 -> PASS (Diff: 0.000)']"

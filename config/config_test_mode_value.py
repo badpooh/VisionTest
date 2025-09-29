@@ -74,9 +74,9 @@ class TestModeBalance(Enum):
 				{'low': 1.5, 'high': 2.5, 'unit': "%"},
 				{'low': 1.5, 'high': 2.5, 'unit': "%"}]
 	curr_cf = [
-				{'low': 1.400, 'high': 1.500, 'unit': ""},
-				{'low': 1.400, 'high': 1.500, 'unit': ""},
-				{'low': 1.400, 'high': 1.500, 'unit': ""}]
+				{'low': 1.400, 'high': 1.500},
+				{'low': 1.400, 'high': 1.500},
+				{'low': 1.400, 'high': 1.500}]
 	curr_kf = [
 				{'low': 1.200, 'high': 1.500, 'unit': ""},
 				{'low': 1.200, 'high': 1.500, 'unit': ""},
@@ -107,10 +107,10 @@ class TestModeBalance(Enum):
 				{'low': 20.0, 'high': 30.0, 'unit': "%"},
 				{'low': 20.0, 'high': 30.0, 'unit': "%"}]
 	pow_s = [
-				{'low': 1.300, 'high': 1.400, 'unit': "kVAR"},
-				{'low': 1.300, 'high': 1.400, 'unit': "kVAR"},
-				{'low': 1.300, 'high': 1.400, 'unit': "kVAR"},
-				{'low': 3.900, 'high': 4.200, 'unit': "kVAR"}]
+				{'low': 2.500, 'high': 2.900, 'unit': "kVAR"},
+				{'low': 2.500, 'high': 2.900, 'unit': "kVAR"},
+				{'low': 2.500, 'high': 2.900, 'unit': "kVAR"},
+				{'low': 7.500, 'high': 8.700, 'unit': "kVAR"}]
 	pow_s_ratio = [
 				{'low': 49.0, 'high': 51.0, 'unit': "%"},
 				{'low': 49.0, 'high': 51.0, 'unit': "%"},

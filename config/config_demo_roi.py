@@ -16,7 +16,7 @@ class ConfigROI(Enum):
     m_curr_tdd_fixed_text = ['Total Demand Distortion Max', 'A B C']
     m_curr_cf_fixed_text = ['Crest Factor Max', 'A B C']
     m_curr_kf_fixed_text = ['K-Factor Max', 'A B C']
-    m_curr_residual_fixed_text = ['Residual Current ', 'Min Max', 'RMS Fund.']
+    m_curr_residual_fixed_text = ['Residual Current', 'Min Max', 'RMS Fund.']
     m_pow_p_fixed_text = ['Active Power Min Max', 'A B C Total']
     m_pow_q_fixed_text = ['Reactive Power Min Max', 'A B C Total']
     m_pow_s_fixed_text = ['Apparent Power Min Max', 'A B C Total']

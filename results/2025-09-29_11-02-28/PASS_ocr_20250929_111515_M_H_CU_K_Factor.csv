@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['K-Factor Max', 'A B C']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,[] / Timestamp Standard: 2025-09-29 11:15:06+00:00
+Measurement Results,"[""'1.346' -> PASS"", ""'1.322' -> PASS"", ""'1.337' -> PASS""]"
+Modbus Measurement,"['1.314', '1.333', '1.341']"

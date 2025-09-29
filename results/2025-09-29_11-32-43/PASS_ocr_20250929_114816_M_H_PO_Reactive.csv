@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Reactive Power Min Max', 'A B C Total']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,"['24.9 % -> PASS', '25.0 % -> PASS', '24.9 % -> PASS', '24.9 % -> PASS']"
+Timestamp Results,"['2025-09-29 11:48:15 -> PASS', '2025-09-29 11:48:11 -> PASS', '2025-09-29 11:48:12 -> PASS', '2025-09-29 11:48:12 -> PASS'] / Timestamp Standard: 2025-09-29 11:48:08+00:00"
+Measurement Results,"[""'1.366 kVAR' -> PASS"", ""'1.371 kVAR' -> PASS"", ""'1.365 kVAR' -> PASS"", ""'4.100 kVAR' -> PASS""]"
+Modbus Measurement,"['Modbus: 1.374, OCR: 1.366 -> PASS (Diff: 0.008)', 'Modbus: 1.372, OCR: 1.371 -> PASS (Diff: 0.001)', 'Modbus: 1.368, OCR: 1.365 -> PASS (Diff: 0.003)', 'Modbus: 4.104, OCR: 4.100 -> PASS (Diff: 0.004)']"

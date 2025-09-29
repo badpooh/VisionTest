@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Fundamental Current Min Max', 'A B C Average']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,[] / Timestamp Standard: None
+Measurement Results,"[""'24.83 A' -> PASS"", ""'24.92 A' -> PASS"", ""'24.90 A' -> PASS"", ""'24.89 A' -> PASS""]"
+Modbus Measurement,"['24.84', '24.94', '24.90', '24.92']"

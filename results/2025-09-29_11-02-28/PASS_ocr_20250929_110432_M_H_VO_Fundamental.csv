@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Fund. Volt. L-L L-N Min Max', 'AB BC CA Average']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,[] / Timestamp Standard: 2025-09-29 11:04:23+00:00
+Measurement Results,"[""'189.6 V' -> PASS"", ""'189.2 V' -> PASS"", ""'189.5 V' -> PASS"", ""'189.5 V' -> PASS""]"
+Modbus Measurement,"['189.7', '189.5', '189.6', '189.6']"

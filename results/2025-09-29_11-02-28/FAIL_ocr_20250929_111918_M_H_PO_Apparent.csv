@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Apparent Power Min Max', 'A B C Total']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,[] / Timestamp Standard: 2025-09-29 11:19:09+00:00
+Measurement Results,"[""'2.721 kVA' -> (FAIL)"", ""'2.722 kVA' -> (FAIL)"", ""'2.722 kVA' -> (FAIL)"", ""'8.170 kVA' -> (FAIL)""]"
+Modbus Measurement,"['2.725', '2.726', '2.729', '8.172']"

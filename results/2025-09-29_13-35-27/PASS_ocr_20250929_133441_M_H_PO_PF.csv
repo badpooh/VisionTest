@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Power Factor Min Max', 'A B C Total']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,"[""'Lag' vs 'Lag' -> PASS"", ""'Lag' vs 'Lag' -> PASS"", ""'Lag' vs 'Lag' -> PASS"", ""'Lag' vs 'Lag' -> PASS""]"
+Timestamp Results,[] / Timestamp Standard: None
+Measurement Results,"[""'0.863' -> PASS"", ""'0.864' -> PASS"", ""'0.865' -> PASS"", ""'0.865' -> PASS""]"
+Modbus Measurement,"['Modbus: 0.864, OCR: 0.863 -> PASS (Diff: 0.001)', 'Modbus: 0.864, OCR: 0.864 -> PASS (Diff: 0.000)', 'Modbus: 0.865, OCR: 0.865 -> PASS (Diff: 0.000)', 'Modbus: 0.865, OCR: 0.865 -> PASS (Diff: 0.000)']"

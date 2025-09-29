@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Residual Current', 'Min Max', 'RMS Fund.']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,[] / Timestamp Standard: None
+Measurement Results,"[""'0.875 A' -> PASS"", ""'0.276 A' -> PASS""]"
+Modbus Measurement,"['Modbus: 0.880, OCR: 0.875 -> PASS (Diff: 0.005)', 'Modbus: 0.272, OCR: 0.276 -> PASS (Diff: 0.004)']"

@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Reactive Power Min Max', 'A B C Total']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,[] / Timestamp Standard: None
+Measurement Results,"[""'1.374 kVAR' -> PASS"", ""'1.377 kVAR' -> PASS"", ""'1.370 kVAR' -> PASS"", ""'4.108 kVAR' -> PASS""]"
+Modbus Measurement,"['1.373', '1.380', '1.368', '4.108']"

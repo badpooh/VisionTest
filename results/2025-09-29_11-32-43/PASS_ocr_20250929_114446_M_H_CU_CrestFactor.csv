@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Crest Factor Max', 'A B C']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,"['2025-09-29 11:44:42 -> PASS', '2025-09-29 11:44:44 -> PASS', '2025-09-29 11:44:41 -> PASS'] / Timestamp Standard: 2025-09-29 11:44:38+00:00"
+Measurement Results,"[""'1.464' -> PASS"", ""'1.466' -> PASS"", ""'1.470' -> PASS""]"
+Modbus Measurement,"['Modbus: 1.460, OCR: 1.464 -> PASS (Diff: 0.004)', 'Modbus: 1.464, OCR: 1.466 -> PASS (Diff: 0.002)', 'Modbus: 1.462, OCR: 1.470 -> PASS (Diff: 0.008)']"

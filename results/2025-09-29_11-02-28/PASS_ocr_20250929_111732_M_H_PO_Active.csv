@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Active Power Min Max', 'A B C Total']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,[] / Timestamp Standard: 2025-09-29 11:17:24+00:00
+Measurement Results,"[""'2.366 kW' -> PASS"", ""'2.359 kW' -> PASS"", ""'2.368 kW' -> PASS"", ""'7.081 kW' -> PASS""]"
+Modbus Measurement,"['2.366', '2.363', '2.371', '7.086']"

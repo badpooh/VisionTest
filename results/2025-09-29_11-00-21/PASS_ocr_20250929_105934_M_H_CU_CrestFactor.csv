@@ -1,0 +1,8 @@
+Parameter,Value
+Data View Fixed text,"['Crest Factor Max', 'A B C']"
+OCR Errors (Extra),[] (PASS)
+OCR Errors (Missing),[] (PASS)
+Meas Ratio Results,[]
+Timestamp Results,[] / Timestamp Standard: None
+Measurement Results,"[""'1.457' -> PASS"", ""'1.453' -> PASS"", ""'1.460' -> PASS""]"
+Modbus Measurement,"['1.454', '1.458', '1.465']"
