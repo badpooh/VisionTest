@@ -305,9 +305,6 @@ class TestWorker(QThread):
         
         os.makedirs(self.base_save_path, exist_ok=True)
         self.test_map = {
-            # "tm_all": lambda: print("not yet"),
-            # "tm_balance": partial(self.execute_test_mode, self.meter_demo_test.meter_test_mode_balance),
-            # "tm_noload": partial(self.execute_test_mode, self.meter_demo_test.noload_test_mode),
             "m_s_initialize": lambda: self.modbus_label.setup_initialization(),
         }
         for key, method_name in sl.DASHBORAD_TEST[0:31]:
@@ -358,7 +355,6 @@ class TestWorker(QThread):
             row_start_time = self.meter_demo_test.modbus_label.system_time_read()
 
             test_process = TestProcess(
-                setup_test=self.setup_test_instance,
                 test_mode=self.test_mode_instance,
                 score_callback = lambda score: self.result_callback(score, row),
                 stop_callback = lambda: self.stopRequested,
@@ -366,13 +362,6 @@ class TestWorker(QThread):
             )
 
             for test_name in test_list:
-                # if test_name == "tm_balance":
-                #     # 이미 self.test_mode가 None이면 새로 세팅, 아니면 유지
-                #     self.execute_test_mode(self.meter_demo_test.test_mode_ocr_process(self.base_save_path, self.search_pattern))
-                    
-                # if test_name == "tm_noload":
-                #     self.execute_test_mode(self.meter_demo_test.noload_test_mode)
-
                 if test_name == "m_s_initialize":
                     self.modbus_label.setup_initialization()
                 else :
