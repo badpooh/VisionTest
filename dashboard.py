@@ -1,20 +1,15 @@
-from PySide6.QtGui import QIcon, QCursor, QTextCursor
-from PySide6.QtCore import QSize, Qt, QObject, Signal, QThread
-from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QMainWindow, QPushButton, QMenu, QMessageBox, QHeaderView, QTableWidgetItem, QFileDialog
+from PySide6.QtCore import Qt, QObject, Signal, QThread
+from PySide6.QtWidgets import QMainWindow, QMessageBox, QHeaderView, QTableWidgetItem, QFileDialog
 from resources_rc import *
 import os
 from datetime import datetime
 import xml.etree.ElementTree as ET
-from functools import partial
 
 from ui_dashboard import Ui_MainWindow
 from demo_test.demo_process import DemoTest
 
-from setup_test.setup_process import SetupTest
 from setup_test.setup_setting import SettingWindow
 from setup_test.setup_setting import SettingIP
-from setup_test.setup_db import IPDataBase
 
 from function.func_connection import ConnectionManager
 from function.func_process import TestProcess
@@ -22,7 +17,6 @@ from function.func_modbus import ModbusLabels
 
 from config.config_setting import SettingList as sl
 
-from frame_test.webcam_function import WebCam
 
 image_directory = r"\\10.10.20.30\screenshot\10.10.26.159"
 
@@ -31,7 +25,7 @@ class MyDashBoard(QMainWindow, Ui_MainWindow):
     cb_StateChanged = Signal(int)
     cb_AccuraSMChanged = Signal(int)
 
-    def __init__(self, setup_test_instance: SetupTest, test_mode_instance: DemoTest):
+    def __init__(self, test_mode_instance: DemoTest):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle("My DashBoard")
@@ -45,7 +39,6 @@ class MyDashBoard(QMainWindow, Ui_MainWindow):
         self.thread = False
         self.stop_thread = False
         self.selected_ip = ''
-        self.setup_test_instance = setup_test_instance
         self.test_mode_instance = test_mode_instance
         self.connect_manager = ConnectionManager()
         self.alarm = Alarm()
@@ -127,15 +120,6 @@ class MyDashBoard(QMainWindow, Ui_MainWindow):
         
     def all_disconnect(self):
         self.connect_manager.tcp_disconnect()
-
-    def select_webcam(self):
-        self.webcam = WebCam()
-
-    def start_webcam(self):
-        self.webcam.start_streaming()
-
-    def stop_webcam(self):
-        self.webcam.stop_streaming()
 
     def stop_callback(self):
         return self.stop_thread
@@ -298,7 +282,7 @@ class TestWorker(QThread):
     finished = Signal()          # 전체 테스트 완료 신호
     modbus_label = ModbusLabels()
 
-    def __init__(self, tableWidget, dashboard_instance: MyDashBoard, setup_test_instance: SetupTest, test_mode_instance: DemoTest, connect_manager: ConnectionManager):
+    def __init__(self, tableWidget, dashboard_instance: MyDashBoard, test_mode_instance: DemoTest, connect_manager: ConnectionManager):
         
         current_working_directory = os.getcwd()
         current_folder_name = os.path.basename(current_working_directory)
@@ -309,7 +293,6 @@ class TestWorker(QThread):
         self.dashboard = dashboard_instance
         self.stopRequested = False
         self.meter_demo_test = DemoTest()
-        self.setup_test_instance = setup_test_instance
         self.test_mode_instance = test_mode_instance
         self.connect_manager = connect_manager
         self.search_pattern = os.path.join(image_directory, './**/*.png')

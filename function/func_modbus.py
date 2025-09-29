@@ -25,22 +25,6 @@ class ModbusLabels:
 		if self.connect_manager.setup_client is not None: 
 			for value in values:
 				self.response = self.connect_manager.setup_client.write_register(ConfigMap.addr_setup_lock.value[0], value)
-			# vol_value_32bit = 1900
-			# high_word = (vol_value_32bit >> 16) & 0xFFFF
-			# low_word = vol_value_32bit & 0xFFFF
-			# self.response = self.connect_manager.setup_client.read_holding_registers(6000, count=100)
-			# self.response = self.connect_manager.setup_client.read_holding_registers(6100, count=100)
-			# self.response = self.connect_manager.setup_client.read_holding_registers(6200, count=3)
-			# if self.response.isError():
-			# 	print(f"Error reading registers: {self.response}")
-			# 	return
-			# self.response = self.connect_manager.setup_client.write_register(6001, 0)
-			# self.response = self.connect_manager.setup_client.write_registers(6003, [high_word, low_word])
-			# self.response = self.connect_manager.setup_client.write_registers(6005, [high_word, low_word])
-			# self.response = self.connect_manager.setup_client.write_registers(6007, 1900)
-			# self.response = self.connect_manager.setup_client.write_register(6009, 0)
-			# self.response = self.connect_manager.setup_client.write_register(6000, 1)
-			# time.sleep(0.6)
 			for value_control in values_control:
 				self.response = self.connect_manager.setup_client.write_register(ConfigMap.addr_control_lock.value[0], value_control)
 				time.sleep(0.6)
@@ -74,23 +58,6 @@ class ModbusLabels:
 			# print(self.response.isError())
 			print("setup_client가 연결되어 있지 않습니다.")
 		return 
-
-	def noload_test_setting(self):
-		test_mode = "NoLoad"
-		self.touch_manager.uitest_mode_start()
-		values = [2300, 0, 700, 1]
-		values_control = [2300, 0, 1600, 1]
-		if self.connect_manager.setup_client:
-			for value in values:
-				self.response = self.connect_manager.setup_client.write_register(ConfigMap.addr_setup_lock.value[0], value)
-				time.sleep(0.6)
-			for value_control in values_control:
-				self.response = self.connect_manager.setup_client.write_register(ConfigMap.addr_control_lock.value[0], value_control)
-				time.sleep(0.6)
-			self.response = self.connect_manager.setup_client.write_register(4000, 0)
-			self.response = self.connect_manager.setup_client.write_register(4001, 1)
-			print("Noload Demo mode setting Done")
-		return test_mode
 	
 	def read_float(self, address, aggre_selection):
 		
@@ -292,18 +259,7 @@ class ModbusLabels:
 				return
 			if access_addr:
 				self.connect_manager.setup_client.write_register(access_addr.value[0], 1)
-																										
-	# def device_current_time(self):
-	# 	self.response = self.connect_manager.setup_client.read_holding_registers(3060, 1)
-	# 	high_word = self.connect_manager.setup_client.read_holding_registers(3061, 2).registers[0]
-	# 	low_word = self.connect_manager.setup_client.read_holding_registers(3062, 2).registers[0]
-	# 	unix_timestamp = (high_word << 16) | low_word
-
-	# 	utc_time = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc)
-	# 	kst_time = utc_time + timedelta(minutes=540)
-	# 	device_current_time = kst_time
-	# 	return device_current_time
-	
+																									
 	def system_time_read(self):
 		if self.connect_manager.setup_client is None:
 			print("setup_client가 연결되어 있지 않습니다.")
@@ -395,27 +351,3 @@ class ModbusLabels:
 			print(self.response.isError())
 		self.reset_time = datetime.now()
 		return self.reset_time
-	
-	def demo_test_demand(self):
-		self.touch_manager.uitest_mode_start()
-		addr_control_lock = 2901
-		values_control = [2300, 0, 1600, 1]
-		if self.connect_manager.setup_client:
-			for value_control in values_control:
-				self.response = self.connect_manager.setup_client.write_register(addr_control_lock, value_control)
-				time.sleep(0.6)
-			if self.response.isError():
-				print(f"Error reading registers: {self.response}")
-				return
-			self.response = self.connect_manager.setup_client.read_holding_registers(ConfigMap.addr_meas_setup_access.value[0], 1)
-			self.response = self.connect_manager.setup_client.write_register(ConfigMap.addr_demand_sync_mode.value[0], 1)
-			self.response = self.connect_manager.setup_client.write_register(ConfigMap.addr_demand_sub_interval_time.value[0], 2)
-			self.response = self.connect_manager.setup_client.write_register(ConfigMap.addr_demand_num_of_sub_interval.value[0], 3)
-			self.response = self.connect_manager.setup_client.write_register(ConfigMap.addr_meas_setup_access.value[0], 1)
-			demand_reset_time = self.reset_demand_peak()
-			self.reset_demand()
-			self.response = self.connect_manager.setup_client.write_register(ConfigMap.addr_demand_sync.value[0], 1)
-		else:
-			print(self.response.isError())
-			
-		return demand_reset_time

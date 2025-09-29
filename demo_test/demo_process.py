@@ -3,14 +3,12 @@ from function.func_ocr import PaddleOCRManager
 from function.func_touch import TouchManager
 from function.func_modbus import ModbusLabels
 from function.func_evaluation import Evaluation
-from function.func_autogui import AutoGUI
-from PySide6.QtCore import Qt, QObject
+from PySide6.QtCore import QObject
 
 from config.config_touch import ConfigTouch
 from config.config_demo_roi import ConfigROI
 from config.config_map import ConfigMap
 from config.config_map import ConfigInitialValue as civ
-from config.config_ref import ConfigImgRef
 from config.config_test_mode_value import TestModeBalance as tmb
 
 image_directory = r"\\10.10.20.30\screenshot"
@@ -21,7 +19,6 @@ class DemoTest(QObject):
 	touch_manager = TouchManager()
 	modbus_label = ModbusLabels()
 	eval_manager = Evaluation()
-	autogui_manager = AutoGUI()
 
 	def __init__(self):
 		super().__init__()
